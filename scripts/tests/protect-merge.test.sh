@@ -87,6 +87,22 @@ caso 0 develop "gh pr merge 1 --merge --subject 'x>y'"
 caso 2 develop 'gh pr merge 1 --merge --body "a>b" --squash'
 caso 0 develop 'gh pr merge 1 --merge "12">x'
 
+echo "▶ protect-merge: expansões do shell são bloqueadas em 'gh pr merge' (ERR-003, opção B)"
+# O shell expandiria isto para --squash; o hook não enxerga o resultado, então bloqueia o $, a crase e o \
+caso 2 develop 'gh pr merge 1 --merge $(echo --squash)'
+caso 2 develop 'gh pr merge 1 --merge `echo --squash`'
+caso 2 develop 'gh pr merge 1 --merge \--squash'
+caso 2 develop 'gh pr merge 1 --merge $IFS--squash'
+caso 2 develop 'gh pr merge 1 --merge ${X}--squash'
+caso 2 develop 'gh pr merge 1 --merge --body "$(echo x)"'
+caso 2 develop 'gh pr merge $PR --merge'
+# Falso bloqueio aceito: não dá para saber se o $ é literal (aspas simples) sem reimplementar o shell
+caso 2 develop "gh pr merge 1 --merge --body 'custa \$5'"
+# Guardas: só o segmento do 'gh pr merge' é afetado
+caso 0 develop 'echo $HOME && gh pr merge 12 --merge'
+caso 0 develop 'gh pr view $N'
+caso 0 develop 'gh pr merge 12 --merge'
+
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'
 caso 2 main    'gh pr merge --merge'
