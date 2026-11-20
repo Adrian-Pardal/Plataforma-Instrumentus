@@ -1,7 +1,7 @@
 # NOME
 merge-de-pr — pedir ao Claude o merge de um PR na develop e entender o que o hook bloqueia
 
-Última verificação: 2026-10-28 · Testado com: gh 2.103.2, bash 5, jq
+Última verificação: 2026-11-20 · Testado com: gh 2.103.2, bash 5, jq
 
 ## PARA QUE SERVE
 Define quando o Claude pode fazer merge de PR (ADR 0003). Regra: só na
@@ -16,7 +16,11 @@ Três travas sustentam a regra:
    - PR cujo destino não seja `develop` (consulta com `gh pr view --json baseRefName`;
      se a consulta falhar, bloqueia);
    - qualquer comando sem `--merge`, e `--squash`, `--rebase`, `--admin`, `--auto`;
-   - merge por `gh api` (`.../pulls/N/merge`, `mergePullRequest`, `enablePullRequestAutoMerge`).
+   - merge por `gh api` (`.../pulls/N/merge`, `mergePullRequest`, `enablePullRequestAutoMerge`);
+   - `$`, crase ou `\` num `gh pr merge` (o shell poderia expandir isso para `--squash`).
+
+   O hook lê só o texto do comando. `|` ou `;` dentro de aspas, e apóstrofos em duas citações do mesmo
+   comando, **não** são vistos (ERR-003, limitação aceita). Por isso o `ask` (trava 2) é a garantia de fato.
 
 ## QUANDO FAZER
 Sempre que quiser que o Claude integre um PR na `develop`. Você precisa
