@@ -1,7 +1,7 @@
 ---
 id: ERR-002
 titulo: protect-merge bloqueia gh pr merge com redirecionamento de saída
-status: aberto
+status: corrigido
 categoria: bug
 severidade: baixa
 detectado-em: local
@@ -31,11 +31,10 @@ O PR 7 mirava `develop` e o CI estava verde.
 5. Por quê ninguém viu? O `protect-merge.test.sh` cobre estratégias e destinos, mas nenhum caso tem sintaxe de shell em volta do comando (causa raiz: falta de teste com redirecionamento). Não sei se o `protect-merge` e o `protect-push` compartilham código; o conserto do ERR-001 foi só no `protect-push`.
 
 ## Correção
-Pendente. Direção: descartar os tokens de redirecionamento (`>`, `>>`, `<`, `2>`, `2>&1`, `&>`) e o alvo deles antes do `case` de `analisar_merge`, como `tirar_redirecionamentos` faz no `protect-push.sh` (ERR-001), preservando `">"` entre aspas como argumento. Será feita numa branch própria, a pedido do dono.
+Em `.claude/hooks/protect-merge.sh`, a função `tirar_redirecionamentos` descarta os tokens de redirecionamento (`>`, `>>`, `<`, `2>`, `2>&1`, `&>`) e o alvo deles antes de `analisar_merge`. Diferente do `protect-push`, o `protect-merge` tira as aspas antes de separar os tokens; por isso o texto entre aspas ganha um marcador `\x02`, que impede `--body ">" --squash` de ser lido como redirecionamento (isso liberaria o squash). Commit da correção: o último de código desta branch (`fix: protect-merge ignora redirecionamentos`).
 
 ## Teste de regressão
-Ainda não existe (a correção está pendente). Será o primeiro passo da correção, em `scripts/tests/protect-merge.test.sh`, com o gh falso que o teste já usa:
-`gh pr merge 7 --merge 2>&1` (0, e o gh falso deve receber o alvo `7`), `gh pr merge 7 --merge > /tmp/log 2>&1` (0) e `gh pr merge 7 --squash 2>&1` (2). Os dois primeiros devem falhar antes da correção.
+`scripts/tests/protect-merge.test.sh`, seção "redirecionamentos do shell" (commit `b53d98a`, escrito antes da correção). O `gh` falso passou a falhar se receber `<` ou `>`, como o gh real. Casos: `2>&1` (0), `> /tmp/log 2>&1` (0) e `--merge 2>&1` sem número (0) falhavam sem a correção. Também: `--body "a > b"` (0), `--squash 2>&1` (2), `main ... 2>&1` (2) e `--body ">" --squash` (2), que garantem que a correção não libera nada.
 
 ## Prevenção
 Cobrir no teste a sintaxe de shell em volta do comando. Se voltar (2ª ocorrência), propor regra automática (ver skill registrar-erro, passo 7). Como é a mesma família do ERR-001, vale conferir `protect-files.sh` e `protect-push.sh` por redirecionamentos.
