@@ -78,7 +78,8 @@ caso 0 develop 'gh pr merge 7 --merge > --squash'
 caso 2 develop "gh pr merge 1 --merge '--squash'>x"
 caso 2 develop 'gh pr merge 1 --merge "--squash">x'
 caso 2 develop "gh pr merge 1 --merge '--admin'>x"
-caso 2 develop 'gh pr merge 1 --merge "--admin"2>&1'
+caso 2 develop 'gh pr merge 1 --merge "--admin" 2>&1'
+caso 0 develop 'gh pr merge 1 --merge "--admin"2>&1'   # o shell entrega a palavra "--admin2", que não é opção
 caso 2 develop 'gh pr merge 1 --merge "--auto"<x'
 # Texto citado com > dentro continua sendo texto (guardas), e número citado seguido de redirecionamento é o alvo
 caso 0 develop 'gh pr merge 1 --merge --body "a>b"'
