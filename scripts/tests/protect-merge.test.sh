@@ -56,6 +56,24 @@ caso 0 develop 'gh pr merge 12 --merge --body "a > b"'
 caso 2 develop 'gh pr merge 12 --squash 2>&1'
 caso 2 main    'gh pr merge 12 --merge 2>&1'
 caso 2 develop 'gh pr merge 12 --merge --body ">" --squash'
+# Redirecionamento colado ao fim de uma opção: o shell entrega a opção ao gh (achado 🔴 da revisão)
+caso 2 develop 'gh pr merge 7 --merge --squash>x'
+caso 2 develop 'gh pr merge 7 --merge --admin>x'
+caso 2 develop 'gh pr merge 7 --merge --auto>/dev/null'
+caso 2 develop 'gh pr merge 7 --merge --rebase<x'
+caso 2 develop 'gh pr merge 7 --merge --squash&>x'
+# >| (noclobber): o | não pode separar o comando antes de o redirecionamento ser tirado (achado 🔴)
+caso 2 develop 'gh pr merge 7 --merge >| x --squash'
+caso 2 develop 'gh pr merge 7 --merge >|x --squash'
+caso 2 develop 'gh pr merge 7 --merge 2>|x --admin'
+# Outros operadores (já passavam: guardas contra regressão)
+caso 2 develop 'gh pr merge 7 --merge &>x --squash'
+caso 2 develop 'gh pr merge 7 --merge >& x --squash'
+caso 2 develop 'gh pr merge 7 --merge <<< x --squash'
+# O que NÃO é argumento do gh continua liberado
+caso 0 develop 'gh pr merge 7 --merge>x'
+caso 0 develop 'gh pr merge 12>x --merge'
+caso 0 develop 'gh pr merge 7 --merge > --squash'
 
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'
