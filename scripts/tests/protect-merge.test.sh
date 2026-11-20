@@ -74,6 +74,17 @@ caso 2 develop 'gh pr merge 7 --merge <<< x --squash'
 caso 0 develop 'gh pr merge 7 --merge>x'
 caso 0 develop 'gh pr merge 12>x --merge'
 caso 0 develop 'gh pr merge 7 --merge > --squash'
+# Opção ENTRE ASPAS com redirecionamento colado: o shell entrega a opção ao gh (achado 🔴 da 2ª revisão)
+caso 2 develop "gh pr merge 1 --merge '--squash'>x"
+caso 2 develop 'gh pr merge 1 --merge "--squash">x'
+caso 2 develop "gh pr merge 1 --merge '--admin'>x"
+caso 2 develop 'gh pr merge 1 --merge "--admin"2>&1'
+caso 2 develop 'gh pr merge 1 --merge "--auto"<x'
+# Texto citado com > dentro continua sendo texto (guardas), e número citado seguido de redirecionamento é o alvo
+caso 0 develop 'gh pr merge 1 --merge --body "a>b"'
+caso 0 develop "gh pr merge 1 --merge --subject 'x>y'"
+caso 2 develop 'gh pr merge 1 --merge --body "a>b" --squash'
+caso 0 develop 'gh pr merge 1 --merge "12">x'
 
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'
