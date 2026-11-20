@@ -116,6 +116,23 @@ caso 0 develop 'echo $HOME && gh pr merge 12 --merge'
 caso 0 develop 'gh pr view $N'
 caso 0 develop 'gh pr merge 12 --merge'
 
+echo "▶ protect-merge: flag global, GH_REPO e alias escondem o merge (ERR-003, 5ª revisão)"
+# "gh -R x pr merge" não começa com "gh pr merge": passa pelo hook e pelo "ask" do settings.json
+caso 2 develop 'gh -R o/r pr merge 1 --squash'
+caso 2 develop 'gh --repo o/r pr merge 1 --admin'
+caso 2 develop 'gh -R o/r pr merge 1 --merge'
+# GH_REPO/GH_HOST mudam o repositório do merge, mas o hook consulta o PR no repositório da sessão
+caso 2 develop 'GH_REPO=o/r gh pr merge 1 --merge'
+caso 2 develop 'GH_HOST=x gh pr merge 1 --merge'
+# alias: "gh pm 1" vira "gh pr merge --squash 1" sem o hook ver
+caso 2 develop 'gh alias set pm "pr merge --squash"'
+caso 2 develop 'gh alias import aliases.yml'
+# Guardas: o que não é merge continua liberado
+caso 0 develop 'gh -R o/r pr view 1'
+caso 0 develop 'gh --version'
+caso 0 develop 'gh alias list'
+caso 0 develop 'FOO=1 gh pr merge 12 --merge'
+
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'
 caso 2 main    'gh pr merge --merge'
