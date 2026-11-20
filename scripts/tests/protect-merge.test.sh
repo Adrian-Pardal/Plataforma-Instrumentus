@@ -89,17 +89,25 @@ caso 0 develop 'gh pr merge 1 --merge "12">x'
 
 echo "▶ protect-merge: expansões do shell são bloqueadas em 'gh pr merge' (ERR-003, opção B)"
 # O shell expandiria isto para --squash; o hook não enxerga o resultado, então bloqueia o $, a crase e o \
+# shellcheck disable=SC2016  # $ e crase literais de propósito: é o que o hook precisa bloquear
 caso 2 develop 'gh pr merge 1 --merge $(echo --squash)'
+# shellcheck disable=SC2016  # idem
 caso 2 develop 'gh pr merge 1 --merge `echo --squash`'
 caso 2 develop 'gh pr merge 1 --merge \--squash'
+# shellcheck disable=SC2016  # idem
 caso 2 develop 'gh pr merge 1 --merge $IFS--squash'
+# shellcheck disable=SC2016  # idem
 caso 2 develop 'gh pr merge 1 --merge ${X}--squash'
+# shellcheck disable=SC2016  # idem
 caso 2 develop 'gh pr merge 1 --merge --body "$(echo x)"'
+# shellcheck disable=SC2016  # idem
 caso 2 develop 'gh pr merge $PR --merge'
 # Falso bloqueio aceito: não dá para saber se o $ é literal (aspas simples) sem reimplementar o shell
 caso 2 develop "gh pr merge 1 --merge --body 'custa \$5'"
 # Guardas: só o segmento do 'gh pr merge' é afetado
+# shellcheck disable=SC2016  # $ literal de propósito: o hook é quem decide
 caso 0 develop 'echo $HOME && gh pr merge 12 --merge'
+# shellcheck disable=SC2016  # idem
 caso 0 develop 'gh pr view $N'
 caso 0 develop 'gh pr merge 12 --merge'
 
