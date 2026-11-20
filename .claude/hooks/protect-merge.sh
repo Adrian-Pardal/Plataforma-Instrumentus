@@ -4,10 +4,12 @@
 # Bloqueia --squash, --rebase, --admin, --auto, qualquer PR cujo destino não seja a develop (main é só do dono)
 # e os merges feitos por "gh api" (REST /pulls/N/merge e GraphQL mergePullRequest / enablePullRequestAutoMerge).
 # Saída: 0 = liberado (ou não é merge) · 2 = bloqueado (o stderr é mostrado ao Claude e o comando NÃO roda).
-# Limitação: é análise estática do TEXTO do comando. Corta o comando em |, ;, && e || antes de olhar as aspas
-# e pareia aspas de tipos diferentes na mesma linha como o regex achar ("it's" --squash "x's" esconde o --squash):
-# aceito como limitação (ERR-003, opção C). $, crase e \ em 'gh pr merge' são bloqueados (opção B), pois o
-# shell os expandiria sem o hook ver. A confirmação do "gh pr merge" também passa pelo "ask" do settings.json:
+# Limitação: é análise estática do TEXTO do comando. Só olha segmentos que COMEÇAM com "gh" (ou "VAR=x gh"):
+# "env gh", "command gh", "xargs gh", "sh -c" e subshell passam. Corta o comando em |, ;, && e || antes de
+# olhar as aspas e pareia aspas de tipos diferentes como o regex achar ("it's" --squash "x's" esconde o
+# --squash); uma quebra de linha dentro de aspas e um glob (--s*) também escapam. Tudo isso é aceito como
+# limitação (ERR-003, opção C). $, crase, \ e { em 'gh pr merge' são bloqueados (opção B), pois o shell os
+# expandiria sem o hook ver. A confirmação do "gh pr merge" também passa pelo "ask" do settings.json:
 # este hook é a segunda camada.
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
@@ -151,7 +153,7 @@ while IFS= read -r SEG; do
     pr)  if [[ "${TOK[$((i+2))]:-}" == "merge" ]]; then
            # ERR-003 (opção B): o shell pode expandir $, crase e \ para uma opção proibida; o hook não vê o resultado.
            case "$SEG_ORIGINAL" in
-             *'$'* | *'`'* | *\\*) bloquear "'gh pr merge' com \$, crase ou \\ não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso." ;;
+             *'$'* | *'`'* | *\\* | *'{'*) bloquear "'gh pr merge' com \$, crase, \\ ou { não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso; para um texto com esses caracteres, use --body-file." ;;
            esac
            analisar_merge "$CWD" "${TOK[@]:$((i+3))}"
          fi ;;
