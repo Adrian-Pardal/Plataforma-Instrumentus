@@ -23,6 +23,7 @@ Também libera quando há apóstrofo ou aspa dentro de duas citações diferente
 O `printf '[%s] '` mostra que o shell entrega `--squash` ao gh nesses casos. Já passava na `develop`.
 Depois da opção B (ver Correção), as expansões (`$(...)`, crase, `\`, `$IFS`, `${X}`) passam a ser bloqueadas; o restante continua liberado.
 Também libera (confirmado na 4ª revisão): `env gh pr merge ... --squash`, `sh -c "gh pr merge ... --squash"`, `command gh`, `xargs gh` (o hook só olha segmentos que começam com `gh`; já passava na `develop`), expansão de chaves (`{--squash,x}`, corrigida com a opção B em `162aca3`), glob (`--s*`, só com um arquivo `--s...` na pasta) e quebra de linha dentro de aspas.
+Achados na 5ª revisão: `gh -R o/r pr merge 1 --squash` e `gh --repo o/r pr merge 1 --admin` (passam pelo hook **e** pelo `ask`, que só casa comandos que começam com `gh pr merge`), `GH_REPO=o/r gh pr merge 1 --merge` (o hook consulta o PR no repositório da sessão), `cd outra-pasta && gh pr merge ...` (consulta na pasta errada) e `gh alias set pm "pr merge --squash"` seguido de `gh pm 1`. Os três primeiros e o alias foram corrigidos na 6ª rodada (`d778e3a`); o `cd` e um `GH_REPO` exportado em outro segmento ficam como limitação.
 
 ## Como reproduzir
 1. Criar um `gh` falso no PATH que, para `gh pr view`, imprime `develop` (com um PR real que mira `develop` o resultado é o mesmo).
@@ -39,19 +40,21 @@ Também libera (confirmado na 4ª revisão): `env gh pr merge ... --squash`, `sh
 
 ## Correção
 Decisão do dono em 2026-11-20: opções C + B.
-- B (corrigida): `gh pr merge` com `$`, crase, `\` ou `{` no texto é bloqueado (`5b820bc`; o `{` veio em `162aca3`). Custa um falso bloqueio, por exemplo `--body "custa $5"` ou `--body "fix {x}"`; a mensagem sugere `--body-file`.
-- C (aceita como limitação): `|`, `;`, `&&`, `||` dentro de aspas, aspas de tipos diferentes pareando errado, quebra de linha em aspas, glob e `gh` fora do início do segmento (`env`, `command`, `xargs`, `sh -c`, subshell) continuam sem ser vistos. Só o `ask` do `settings.json` (confirmação do dono) cobre esses casos.
+- B (corrigida): `gh pr merge` com `$`, crase, `\` ou `{` no texto é bloqueado (`5b820bc`; o `{` veio em `162aca3`). Custa um falso bloqueio, por exemplo `--body "custa $5"` ou `--body "fix {x}"`; a mensagem sugere `--body-file`. Na 6ª rodada (`d778e3a`) também são bloqueados: flag global antes do subcomando (`gh -R x pr merge`; escreva `gh pr merge ... -R x`), `GH_REPO`/`GH_HOST` no prefixo e `gh alias set/import`.
+- C (aceita como limitação): `|`, `;`, `&&`, `||` dentro de aspas, aspas de tipos diferentes pareando errado, quebra de linha em aspas, glob, `cd outra-pasta && gh pr merge`, `GH_REPO` exportado em outro segmento e `gh` fora do início do segmento (`env`, `command`, `xargs`, `sh -c`, subshell) continuam sem ser vistos. Nos wrappers, a única barreira é você ler o comando antes de aprovar, porque o `ask` não casa com eles.
 - A (dividir o comando respeitando as aspas, com biblioteca compartilhada pelos hooks) fica como alternativa futura (DEBT-002), com ADR.
 
 ## Teste de regressão
-`scripts/tests/protect-merge.test.sh`, seção "expansões do shell" (`74d3c2a`): 8 casos vermelhos antes de `5b820bc` (`$(...)`, crase, `\--squash`, `$IFS--squash`, `${X}--squash`, `--body "$(echo x)"`, `$PR` e o falso bloqueio `'custa $5'`) e 3 guardas. Na 4ª revisão: 3 casos vermelhos de `{` (`f55e1e2`: `{--squash,x}`, `--{squash,x}` e o falso bloqueio `"fix {x}"`), corrigidos em `162aca3`. Os casos da opção C não têm teste, pois a limitação é aceita.
+`scripts/tests/protect-merge.test.sh`, seção "expansões do shell" (`74d3c2a`): 8 casos vermelhos antes de `5b820bc` (`$(...)`, crase, `\--squash`, `$IFS--squash`, `${X}--squash`, `--body "$(echo x)"`, `$PR` e o falso bloqueio `'custa $5'`) e 3 guardas. Na 4ª revisão: 3 casos vermelhos de `{` (`f55e1e2`: `{--squash,x}`, `--{squash,x}` e o falso bloqueio `"fix {x}"`), corrigidos em `162aca3`. Na 5ª revisão: 7 casos vermelhos (`3ddf376`: `gh -R x pr merge` em 3 formas, `GH_REPO=`, `GH_HOST=`, `gh alias set` e `gh alias import`) e 4 guardas, corrigidos em `d778e3a`. Os casos da opção C não têm teste, pois a limitação é aceita.
 
 ## Prevenção
-O `gh pr merge` passa por `permissions.ask` no `settings.json`: todo merge pede confirmação do dono, independentemente do hook; o hook é a segunda camada. A limitação das aspas está documentada no cabeçalho de `protect-merge.sh` e na página `docs/help/ferramentas/merge-de-pr.md`. Se voltar (2ª ocorrência), propor regra automática (ver skill registrar-erro, passo 7).
+O `permissions.ask` do `settings.json` (`Bash(gh pr merge *)`) pede confirmação do dono, mas só casa comandos que começam com `gh pr merge`. Não cobre `env gh`, `command gh`, `xargs gh`, `sh -c` nem subshell; nesses casos a única barreira é o dono ler o comando antes de aprovar. O hook é a segunda camada. A limitação das aspas está documentada no cabeçalho de `protect-merge.sh` e na página `docs/help/ferramentas/merge-de-pr.md`. Se voltar (2ª ocorrência), propor regra automática (ver skill registrar-erro, passo 7).
 
 ## Lição para a IA
-Um hook que lê o texto do comando é rede de segurança, não garantia. Ao descrevê-lo, dizer também o que ele não enxerga, e não afirmar que "não libera nada".
+Um hook que lê o texto do comando é rede de segurança, não garantia. Ao descrevê-lo, dizer também o que ele não enxerga, e não afirmar que "não libera nada". Também não dizer que o `ask` cobre tudo: o padrão só casa o início do comando (esse exagero apareceu ao recomendar a opção C).
 
 ## Ocorrências
 - 2026-11-20 — achado na 2ª revisão do PR #8, rodando o hook com um `gh` falso; já existia na `develop`.
 - 2026-11-20 — na 3ª revisão, achado o caso dos apóstrofos. O dono decide C + B; B corrigida em `5b820bc`.
+- 2026-11-20 — na 4ª revisão, achados o `{` (expansão de chaves) e a lista de limitações incompleta; corrigidos em `162aca3` e `ff24840`.
+- 2026-11-20 — na 5ª revisão, achados `gh -R x pr merge`, `GH_REPO`, `cd` e `gh alias`, além do exagero sobre o `ask`; corrigidos em `d778e3a` (o `cd` ficou como limitação).

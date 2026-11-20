@@ -18,12 +18,16 @@ Três travas sustentam a regra:
    - qualquer comando sem `--merge`, e `--squash`, `--rebase`, `--admin`, `--auto`;
    - merge por `gh api` (`.../pulls/N/merge`, `mergePullRequest`, `enablePullRequestAutoMerge`);
    - `$`, crase, `\` ou `{` num `gh pr merge` (o shell poderia expandir isso para `--squash`); para um
-     texto com esses caracteres, use `--body-file`.
+     texto com esses caracteres, use `--body-file`;
+   - flag antes do subcomando (`gh -R x pr merge`: escreva `gh pr merge ... -R x`), `GH_REPO`/`GH_HOST` antes
+     do `gh` e `gh alias set/import`.
 
-   O hook lê só o texto do comando e só olha segmentos que **começam** com `gh`: `env gh`, `sh -c "gh ..."` e
-   `xargs gh` não são vistos. Também escapam `|` ou `;` dentro de aspas, apóstrofos em duas citações do mesmo
-   comando, glob e quebra de linha dentro de aspas (ERR-003, limitação aceita). Por isso o `ask` (trava 2) é
-   a garantia de fato.
+   O hook lê só o texto do comando e só olha segmentos que **começam** com `gh`: `env gh`, `command gh`,
+   `xargs gh`, `sh -c "gh ..."` e subshell não são vistos. Também escapam `|`, `;`, `&&` ou `||` dentro de
+   aspas, apóstrofos em duas citações do mesmo comando, glob, quebra de linha dentro de aspas, `cd` para outra
+   pasta e `GH_REPO` exportado em outro segmento (ERR-003, limitação aceita). O `ask` (trava 2) só casa comandos
+   que começam com `gh pr merge`: não cobre esses casos. Neles, a única barreira é você ler o comando antes
+   de aprovar.
 
 ## QUANDO FAZER
 Sempre que quiser que o Claude integre um PR na `develop`. Você precisa
