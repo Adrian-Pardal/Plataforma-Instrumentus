@@ -16,6 +16,9 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$ENTRADA") || bloquear "entrada J
 CWD=$(jq -r '.cwd // empty' <<<"$ENTRADA")
 [[ -n "$CWD" ]] || CWD="${CLAUDE_PROJECT_DIR:-.}"
 
+# ">|" (redirecionamento com noclobber) é UM operador: sem isto, o "|" abaixo cortaria o comando no meio
+# e o resto da linha ("x --squash") viraria outro segmento, ignorado (ERR-002).
+CMD="${CMD//>|/>}"
 # Um comando pode juntar vários ("cd x && gh pr merge ..."): separa em um segmento por linha.
 CMD="${CMD//&&/$'\n'}"; CMD="${CMD//||/$'\n'}"; CMD="${CMD//;/$'\n'}"; CMD="${CMD//|/$'\n'}"
 
@@ -28,12 +31,17 @@ CURTAS_COM_VALOR='AbFtR'
 # Aqui o marcador \x02 também é removido, e tokens que ficam vazios ("") somem, como antes.
 REDIR='^([0-9]*|&)(>>|>|<)'
 tirar_redirecionamentos() {   # lê TOK e deixa nele o resultado
-  local -a LIMPO=(); local T PULAR=0
+  local -a LIMPO=(); local T PULAR=0 OP
   for T in "${TOK[@]}"; do
     if [[ $PULAR -eq 1 ]]; then PULAR=0; continue; fi      # alvo do operador anterior
     if [[ "$T" =~ $REDIR ]]; then
       [[ "$T" =~ ${REDIR}$ ]] && PULAR=1                    # operador sozinho (">"): o próximo token é o alvo
       continue                                              # "2>&1" e ">/tmp/log" já vêm com o alvo junto
+    fi
+    if [[ "$T" != $'\x02'* && "$T" == *[\<\>]* ]]; then     # colado ao fim de uma palavra: "--squash>x"
+      OP="${T#"${T%%[<>]*}"}"                               # do primeiro < ou > até o fim
+      T="${T%%[<>]*}"; T="${T%&}"                           # a palavra antes dele (e sem o & de "&>")
+      [[ "$OP" =~ ${REDIR}$ ]] && PULAR=1                   # "--squash>" sozinho: o próximo token é o alvo
     fi
     T="${T//$'\x02'/}"
     [[ -n "$T" ]] && LIMPO+=("$T")
