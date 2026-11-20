@@ -49,12 +49,12 @@ de segredos estão ligados.
 ## PASSO A PASSO
 1. Tornar a `develop` a branch padrão.
    ```bash
-   gh api -X PATCH repos/Adrian-Pardal/Plataforma-TFA -f default_branch=develop
+   gh api -X PATCH repos/Adrian-Pardal/Plataforma-Instrumentus -f default_branch=develop
    ```
 2. Proteger a `develop` e a `main` com as mesmas regras.
    ```bash
    for b in develop main; do
-     gh api -X PUT "repos/Adrian-Pardal/Plataforma-TFA/branches/$b/protection" --input - <<'JSON'
+     gh api -X PUT "repos/Adrian-Pardal/Plataforma-Instrumentus/branches/$b/protection" --input - <<'JSON'
    {
      "required_status_checks": {"strict": true,
        "checks": [{"context": "seguranca"}, {"context": "verificar"}]},
@@ -71,9 +71,9 @@ de segredos estão ligados.
    Rodar de novo apaga qualquer ajuste feito pelo navegador.
 3. Ligar Dependabot e a proteção de segredos.
    ```bash
-   gh api -X PUT repos/Adrian-Pardal/Plataforma-TFA/vulnerability-alerts
-   gh api -X PUT repos/Adrian-Pardal/Plataforma-TFA/automated-security-fixes
-   gh api -X PATCH repos/Adrian-Pardal/Plataforma-TFA --input - <<'JSON'
+   gh api -X PUT repos/Adrian-Pardal/Plataforma-Instrumentus/vulnerability-alerts
+   gh api -X PUT repos/Adrian-Pardal/Plataforma-Instrumentus/automated-security-fixes
+   gh api -X PATCH repos/Adrian-Pardal/Plataforma-Instrumentus --input - <<'JSON'
    {"security_and_analysis": {
      "secret_scanning": {"status": "enabled"},
      "secret_scanning_push_protection": {"status": "enabled"}}}
@@ -83,7 +83,7 @@ de segredos estão ligados.
 ## COMO CONFERIR QUE DEU CERTO
 ```bash
 for b in develop main; do
-  gh api "repos/Adrian-Pardal/Plataforma-TFA/branches/$b/protection" \
+  gh api "repos/Adrian-Pardal/Plataforma-Instrumentus/branches/$b/protection" \
     --jq '{checks: [.required_status_checks.checks[].context], strict: .required_status_checks.strict, enforce_admins: .enforce_admins.enabled, force_push: .allow_force_pushes.enabled, apagar: .allow_deletions.enabled}'
 done
 ```
@@ -92,16 +92,16 @@ Esperado, nas duas: `checks` com `seguranca` e `verificar`, `strict` e
 
 Dependabot e proteção de segredos:
 ```bash
-gh api repos/Adrian-Pardal/Plataforma-TFA/vulnerability-alerts -i | head -1
-gh api repos/Adrian-Pardal/Plataforma-TFA/automated-security-fixes --jq .enabled
-gh api repos/Adrian-Pardal/Plataforma-TFA --jq '.security_and_analysis | {secret_scanning: .secret_scanning.status, push_protection: .secret_scanning_push_protection.status}'
+gh api repos/Adrian-Pardal/Plataforma-Instrumentus/vulnerability-alerts -i | head -1
+gh api repos/Adrian-Pardal/Plataforma-Instrumentus/automated-security-fixes --jq .enabled
+gh api repos/Adrian-Pardal/Plataforma-Instrumentus --jq '.security_and_analysis | {secret_scanning: .secret_scanning.status, push_protection: .secret_scanning_push_protection.status}'
 ```
 Esperado: o primeiro responde com código `204` (o importante é o 204, o texto
 exato muda conforme a versão do `gh`); o segundo, `true`; o terceiro,
 `enabled` nos dois campos.
 
-No navegador: https://github.com/Adrian-Pardal/Plataforma-TFA/settings/branches
-e https://github.com/Adrian-Pardal/Plataforma-TFA/settings/security_analysis.
+No navegador: https://github.com/Adrian-Pardal/Plataforma-Instrumentus/settings/branches
+e https://github.com/Adrian-Pardal/Plataforma-Instrumentus/settings/security_analysis.
 
 ## SE DER ERRADO
 - **PR travado esperando um check que não existe:** o nome do job mudou.
@@ -112,7 +112,7 @@ e https://github.com/Adrian-Pardal/Plataforma-TFA/settings/security_analysis.
   merge; na `main`, quem mexe é só o dono. Pelo navegador: Settings →
   Branches → apagar a regra. Pela API (troque `develop` por `main` se for o caso):
   ```bash
-  gh api -X DELETE repos/Adrian-Pardal/Plataforma-TFA/branches/develop/protection
+  gh api -X DELETE repos/Adrian-Pardal/Plataforma-Instrumentus/branches/develop/protection
   ```
 - **Push recusado por segredo:** o GitHub achou um segredo no commit.
   Remova-o do commit e, se for real, revogue a credencial. Só use o
