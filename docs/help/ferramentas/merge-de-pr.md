@@ -17,10 +17,13 @@ Três travas sustentam a regra:
      se a consulta falhar, bloqueia);
    - qualquer comando sem `--merge`, e `--squash`, `--rebase`, `--admin`, `--auto`;
    - merge por `gh api` (`.../pulls/N/merge`, `mergePullRequest`, `enablePullRequestAutoMerge`);
-   - `$`, crase ou `\` num `gh pr merge` (o shell poderia expandir isso para `--squash`).
+   - `$`, crase, `\` ou `{` num `gh pr merge` (o shell poderia expandir isso para `--squash`); para um
+     texto com esses caracteres, use `--body-file`.
 
-   O hook lê só o texto do comando. `|` ou `;` dentro de aspas, e apóstrofos em duas citações do mesmo
-   comando, **não** são vistos (ERR-003, limitação aceita). Por isso o `ask` (trava 2) é a garantia de fato.
+   O hook lê só o texto do comando e só olha segmentos que **começam** com `gh`: `env gh`, `sh -c "gh ..."` e
+   `xargs gh` não são vistos. Também escapam `|` ou `;` dentro de aspas, apóstrofos em duas citações do mesmo
+   comando, glob e quebra de linha dentro de aspas (ERR-003, limitação aceita). Por isso o `ask` (trava 2) é
+   a garantia de fato.
 
 ## QUANDO FAZER
 Sempre que quiser que o Claude integre um PR na `develop`. Você precisa
