@@ -9,10 +9,12 @@ FALSO="$(mktemp -d)"; trap 'rm -rf "$FALSO"' EXIT
 falhas=0
 
 # gh falso: "gh pr view ..." imprime $FAKE_BASE; se for "erro", falha como o gh real sem rede ou sem PR.
+# Também falha se algum argumento tiver > ou < (o gh real não acha PR chamado "2>&1": ERR-002).
 # As aspas simples são de propósito: o $1 e o ${FAKE_BASE} devem ser lidos pelo gh falso, não aqui.
 # shellcheck disable=SC2016
 printf '%s\n' '#!/usr/bin/env bash' \
   '[[ "$1 $2" == "pr view" ]] || exit 9' \
+  '[[ "$*" != *[\<\>]* ]] || exit 1' \
   '[[ "${FAKE_BASE:-develop}" != erro ]] || exit 1' \
   'echo "${FAKE_BASE:-develop}"' > "$FALSO/gh"
 chmod +x "$FALSO/gh"
@@ -45,6 +47,14 @@ caso 0 develop 'gh pr merge 12 --merge --subject "feat: x" --body "texto --squas
 caso 0 develop 'gh pr merge 12 --merge -R dono/repo'
 caso 0 develop 'gh pr merge 12 --merge --match-head-commit abc123'
 caso 0 develop 'gh pr merge 1 --merge; gh pr merge 2 --merge'
+
+echo "▶ protect-merge: redirecionamentos do shell não são argumentos do gh (ERR-002)"
+caso 0 develop 'gh pr merge 12 --merge 2>&1'
+caso 0 develop 'gh pr merge 12 --merge > /tmp/log 2>&1'
+caso 0 develop 'gh pr merge --merge 2>&1'
+caso 0 develop 'gh pr merge 12 --merge --body "a > b"'
+caso 2 develop 'gh pr merge 12 --squash 2>&1'
+caso 2 main    'gh pr merge 12 --merge 2>&1'
 
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'
