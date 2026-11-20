@@ -19,16 +19,29 @@ confere() {   # confere <descrição> <0 se passou | outro valor se falhou>
   fi
 }
 
-# Imprime só o frontmatter (entre o 1º e o 2º "---"); vazio se o arquivo não começa com "---".
+# Imprime só o frontmatter (entre o 1º e o 2º "---"); vazio se o arquivo não começa com "---"
+# ou se falta o "---" de fechamento (senão o corpo do arquivo seria lido como frontmatter).
 frontmatter() {
-  awk 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit } { print }' "$1"
+  awk 'NR == 1 { if ($0 != "---") exit; next }
+       $0 == "---" { fechou = 1; exit }
+       { buf = buf $0 "\n" }
+       END { if (fechou) printf "%s", buf }' "$1"
 }
+
+echo "▶ config: o parser de frontmatter"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+printf -- '---\nname: x\ndescription: y\n' > "$TMP/aberto.md"
+[[ -z "$(frontmatter "$TMP/aberto.md")" ]]; confere "sem o --- de fechamento, o frontmatter vem vazio" "$?"
+printf -- '---\nname: x\ndescription: y\n---\ncorpo\n' > "$TMP/ok.md"
+[[ "$(frontmatter "$TMP/ok.md")" == $'name: x\ndescription: y' ]]; confere "com fechamento, devolve só o bloco" "$?"
 
 echo "▶ config: JSON"
 jq empty "$RAIZ/.claude/settings.json" >/dev/null 2>&1; confere ".claude/settings.json é JSON válido" "$?"
 jq empty "$RAIZ/.mcp.json" >/dev/null 2>&1;             confere ".mcp.json é JSON válido" "$?"
 
 echo "▶ config: lefthook.yml"
+# DEBT-001: o CI não instala o lefthook, então esta parte é pulada lá.
 if command -v lefthook >/dev/null; then
   (cd "$RAIZ" && lefthook validate) >/dev/null 2>&1; confere "lefthook validate aceita o lefthook.yml" "$?"
 else
