@@ -27,16 +27,20 @@ resultado() {   # resultado <esperado> <obtido> <descrição> [stderr]
   fi
 }
 
-# Cria um projeto git limpo (tudo commitado) cujo script "test" do package.json é $2.
+# Cria um projeto git limpo (tudo commitado) cujo script "test" do package.json é $2 e guarda o caminho em P.
+# (Sem echo dentro de $(...): num subshell, o exit não pararia o teste.)
 projeto() {   # projeto <nome> <comando do script test>
   local dir="$TMP/$1"
   mkdir -p "$dir/scripts"
   cp "$RAIZ/scripts/verify.sh" "$dir/scripts/verify.sh"
   jq -n --arg t "$2" '{name: "tmp", version: "1.0.0", scripts: {test: $t}}' > "$dir/package.json"
-  git -C "$dir" init -q
+  git -C "$dir" init -q || { echo "FALHA: git init em $dir" >&2; exit 1; }
   git -C "$dir" add -A
-  git -C "$dir" -c user.name=teste -c user.email=teste@exemplo.com commit -q -m "base"
-  echo "$dir"
+  # Sem assinatura nem hooks globais do git: o commit da base não pode depender do ambiente de quem roda.
+  git -C "$dir" -c user.name=teste -c user.email=teste@exemplo.com \
+    -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q -m "base" \
+    || { echo "FALHA: commit da base em $dir" >&2; exit 1; }
+  P="$dir"
 }
 
 # Roda o hook com o JSON da entrada. Sem CLAUDE_PROJECT_DIR (numa sessão real ele aponta para o projeto de verdade).
@@ -48,17 +52,17 @@ rodar_hook() {   # rodar_hook <dir> <stop_hook_active: true|false>
 echo "▶ stop-verify"
 
 # 1. Anti-loop: com stop_hook_active true sai com 0, mesmo com teste falhando e código alterado.
-P="$(projeto anti-loop 'exit 1')"
+projeto anti-loop 'exit 1'
 echo 'x' > "$P/app.js"
 rodar_hook "$P" true; resultado 0 "$?" "stop_hook_active true deixa encerrar"
 
 # 2. Sem mudança de código: só um .md alterado, e o teste falharia se rodasse.
-P="$(projeto sem-codigo 'exit 1')"
+projeto sem-codigo 'exit 1'
 echo 'nota' > "$P/notas.md"
 rodar_hook "$P" false; resultado 0 "$?" "só .md alterado: não roda os testes"
 
 # 3. Teste falhando + arquivo de código alterado: bloqueia.
-P="$(projeto falhando 'exit 1')"
+projeto falhando 'exit 1'
 echo 'x' > "$P/app.js"
 rodar_hook "$P" false; obtido=$?
 resultado 2 "$obtido" "código alterado e teste falhando bloqueia" "$(cat "$TMP/stderr")"
@@ -69,10 +73,12 @@ else
   falhas=$((falhas + 1))
 fi
 
-# 4. Teste passando + arquivo de código alterado: deixa encerrar.
-P="$(projeto passando 'exit 0')"
+# 4. Teste passando + arquivo de código alterado: deixa encerrar. O script "test" grava um marcador:
+#    só o exit 0 não prova nada (sairia 0 também se o hook nem rodasse o verify).
+projeto passando 'touch rodou'
 echo 'x' > "$P/app.js"
 rodar_hook "$P" false; resultado 0 "$?" "código alterado e teste passando deixa encerrar" "$(cat "$TMP/stderr")"
+[[ -e "$P/rodou" ]]; resultado 0 "$?" "o hook rodou o script test (marcador existe)"
 
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
