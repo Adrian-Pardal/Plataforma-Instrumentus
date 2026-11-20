@@ -1,4 +1,4 @@
-# CI da Plataforma TFA: roda em todo PR e em push na main e na develop.
+# CI da Plataforma Instrumentus: roda em todo PR e em push na main e na develop.
 # Endurecimento: permissões mínimas por job e actions de terceiros fixadas pelo SHA completo
 # (a versão fica no comentário; o Dependabot atualiza o SHA e o comentário juntos).
 # Os jobs não têm "name:" de propósito: o check aparece como "seguranca" e "verificar" na proteção de branch.

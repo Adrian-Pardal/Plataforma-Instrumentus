@@ -1,8 +1,10 @@
-# Plataforma de Aceitabilidade TFA
+# Plataforma Instrumentus
 
 ## 1. Projeto
-Pesquisadores montam pesquisas pelos 7 construtos do TFA, publicam um link
-público, coletam respostas anônimas (Likert) e veem médias por construto.
+Plataforma com vários métodos de pesquisa (ver ADR 0004). O primeiro método
+é o de Aceitabilidade TFA: pesquisadores montam pesquisas pelos 7 construtos
+do TFA, publicam um link público, coletam respostas anônimas (Likert) e veem
+médias por construto.
 - Stack: a definir (ver docs/adr).
 - O dono é estudante e quer ENTENDER o código: prefira clareza a esperteza.
 
