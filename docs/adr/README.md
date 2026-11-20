@@ -11,4 +11,4 @@ como "Substituído por NNNN".
 | 0001 | [Fluxo spec-driven com Claude Code](0001-fluxo-spec-driven-com-claude.md) | Aceito | 2026-10-25 |
 | 0002 | [TDD como método padrão e 100% dos testes passando no CI](0002-tdd-como-metodo-padrao.md) | Aceito | 2026-10-28 |
 | 0003 | [Merge de PR na develop pelo Claude, só sob pedido explícito](0003-merge-de-pr-na-develop-pelo-claude.md) | Aceito | 2026-10-28 |
-| 0004 | [Plataforma multi-método Instrumentus](0004-plataforma-multi-metodo-instrumentus.md) | Proposto | 2026-11-20 |
+| 0004 | [Plataforma multi-método Instrumentus](0004-plataforma-multi-metodo-instrumentus.md) | Aceito | 2026-11-20 |

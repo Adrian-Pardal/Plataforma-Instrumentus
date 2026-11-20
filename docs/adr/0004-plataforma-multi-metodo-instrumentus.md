@@ -1,6 +1,6 @@
 # ADR 0004: Plataforma multi-método chamada Instrumentus, com o TFA como primeiro método
 
-- **Status:** Proposto
+- **Status:** Aceito
 - **Data:** 2026-11-20
 - **Substitui:** nenhum
 
