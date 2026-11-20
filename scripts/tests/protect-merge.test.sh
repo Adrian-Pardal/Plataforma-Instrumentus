@@ -55,6 +55,7 @@ caso 0 develop 'gh pr merge --merge 2>&1'
 caso 0 develop 'gh pr merge 12 --merge --body "a > b"'
 caso 2 develop 'gh pr merge 12 --squash 2>&1'
 caso 2 main    'gh pr merge 12 --merge 2>&1'
+caso 2 develop 'gh pr merge 12 --merge --body ">" --squash'
 
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'

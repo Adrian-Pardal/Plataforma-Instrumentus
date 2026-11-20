@@ -22,6 +22,25 @@ CMD="${CMD//&&/$'\n'}"; CMD="${CMD//||/$'\n'}"; CMD="${CMD//;/$'\n'}"; CMD="${CM
 # Letras de opção curta que recebem um valor (-b texto, -R dono/repo...). As demais são booleanas.
 CURTAS_COM_VALOR='AbFtR'
 
+# Tira os redirecionamentos (>, >>, <, 2>, 2>&1, &>) e o alvo deles: o shell os consome antes de o gh
+# rodar, então não são argumentos do "gh pr merge" (ERR-002). Um texto que veio entre aspas vem marcado
+# com \x02 e por isso nunca casa: '--body ">" --squash' continua tendo o --squash como opção.
+# Aqui o marcador \x02 também é removido, e tokens que ficam vazios ("") somem, como antes.
+REDIR='^([0-9]*|&)(>>|>|<)'
+tirar_redirecionamentos() {   # lê TOK e deixa nele o resultado
+  local -a LIMPO=(); local T PULAR=0
+  for T in "${TOK[@]}"; do
+    if [[ $PULAR -eq 1 ]]; then PULAR=0; continue; fi      # alvo do operador anterior
+    if [[ "$T" =~ $REDIR ]]; then
+      [[ "$T" =~ ${REDIR}$ ]] && PULAR=1                    # operador sozinho (">"): o próximo token é o alvo
+      continue                                              # "2>&1" e ">/tmp/log" já vêm com o alvo junto
+    fi
+    T="${T//$'\x02'/}"
+    [[ -n "$T" ]] && LIMPO+=("$T")
+  done
+  TOK=("${LIMPO[@]}")
+}
+
 # Merge por "gh api": REST (PUT .../pulls/N/merge) ou GraphQL (mutations de merge).
 analisar_api() {   # $1 = o segmento inteiro, sem aspas
   local re_rest='pulls/[^[:space:]]*/merge'
@@ -80,14 +99,16 @@ analisar_merge() {   # $1 = pasta onde o gh roda; demais = argumentos depois de 
 }
 
 while IFS= read -r SEG; do
-  # Um texto entre aspas ("texto --squash") é UM argumento: troca os espaços de dentro por \x01 e tira as aspas.
+  # Um texto entre aspas ("texto --squash") é UM argumento: troca os espaços de dentro por \x01, tira as aspas
+  # e põe o marcador \x02 na frente (para tirar_redirecionamentos não confundir '">"' com um redirecionamento).
   re_aspas='"[^"]*"|'"'[^']*'"
   while [[ "$SEG" =~ $re_aspas ]]; do
     TRECHO="${BASH_REMATCH[0]}"
-    NOVO="${TRECHO:1:${#TRECHO}-2}"; NOVO="${NOVO//[[:space:]]/$'\x01'}"
+    NOVO="${TRECHO:1:${#TRECHO}-2}"; NOVO=$'\x02'"${NOVO//[[:space:]]/$'\x01'}"
     SEG="${SEG/"$TRECHO"/$NOVO}"
   done
   read -ra TOK <<<"$SEG"
+  tirar_redirecionamentos
   [[ ${#TOK[@]} -gt 0 ]] || continue
 
   i=0
@@ -95,7 +116,7 @@ while IFS= read -r SEG; do
   [[ "${TOK[$i]:-}" == "gh" || "${TOK[$i]:-}" == */gh ]] || continue
 
   case "${TOK[$((i+1))]:-}" in
-    api) analisar_api "$SEG" ;;
+    api) analisar_api "${SEG//$'\x02'/}" ;;
     pr)  [[ "${TOK[$((i+2))]:-}" == "merge" ]] && analisar_merge "$CWD" "${TOK[@]:$((i+3))}" ;;
   esac
 done <<<"$CMD"
