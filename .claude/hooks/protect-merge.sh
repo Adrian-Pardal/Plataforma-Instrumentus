@@ -8,9 +8,11 @@
 # "env gh", "command gh", "xargs gh", "sh -c" e subshell passam. Corta o comando em |, ;, && e || antes de
 # olhar as aspas e pareia aspas de tipos diferentes como o regex achar ("it's" --squash "x's" esconde o
 # --squash); uma quebra de linha dentro de aspas e um glob (--s*) também escapam. Tudo isso é aceito como
-# limitação (ERR-003, opção C). $, crase, \ e { em 'gh pr merge' são bloqueados (opção B), pois o shell os
-# expandiria sem o hook ver. A confirmação do "gh pr merge" também passa pelo "ask" do settings.json:
-# este hook é a segunda camada.
+# limitação (ERR-003, opção C). O destino do PR é consultado na pasta da sessão: "cd outra-pasta && gh pr merge"
+# e um GH_REPO exportado em outro segmento também não são vistos. Bloqueados (opção B): $, crase, \ e { em
+# 'gh pr merge' (o shell os expandiria sem o hook ver); flag global antes do subcomando; GH_REPO/GH_HOST no
+# prefixo; "gh alias set/import". O "ask" do settings.json só casa comandos que começam com "gh pr merge":
+# não cobre env gh, sh -c, xargs gh nem "gh -R x pr merge".
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
 bloquear() { echo "🚫 protect-merge: $1" >&2; exit 2; }
@@ -148,9 +150,25 @@ while IFS= read -r SEG; do
   while [[ $i -lt ${#TOK[@]} && "${TOK[$i]}" == *=* ]]; do i=$((i+1)); done   # pula "VAR=valor gh ..."
   [[ "${TOK[$i]:-}" == "gh" || "${TOK[$i]:-}" == */gh ]] || continue
 
+  # ERR-003: flag global antes do subcomando ("gh -R o/r pr merge ...") esconde o "pr merge" deste hook e do "ask"
+  if [[ "${TOK[$((i+1))]:-}" == -* ]]; then
+    for T in "${TOK[@]:$((i+1))}"; do
+      [[ "$T" == merge ]] && bloquear "flag antes do subcomando ('gh -R x pr merge') não é permitida: escreva 'gh pr merge ... -R x'."
+    done
+  fi
+
   case "${TOK[$((i+1))]:-}" in
     api) analisar_api "${SEG//[$'\x02\x03']/}" ;;
+    alias) case "${TOK[$((i+2))]:-}" in
+             set | import) bloquear "'gh alias set/import' não é permitido: um alias pode esconder um 'pr merge --squash'." ;;
+           esac ;;
     pr)  if [[ "${TOK[$((i+2))]:-}" == "merge" ]]; then
+           # GH_REPO/GH_HOST no prefixo mudam o repositório do merge; o "gh pr view" abaixo consultaria o errado
+           for ((k = 0; k < i; k++)); do
+             case "${TOK[$k]}" in
+               GH_REPO=* | GH_HOST=*) bloquear "GH_REPO/GH_HOST antes de 'gh pr merge' não é permitido: o destino do PR seria consultado no repositório errado." ;;
+             esac
+           done
            # ERR-003 (opção B): o shell pode expandir $, crase e \ para uma opção proibida; o hook não vê o resultado.
            case "$SEG_ORIGINAL" in
              *'$'* | *'`'* | *\\* | *'{'*) bloquear "'gh pr merge' com \$, crase, \\ ou { não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso; para um texto com esses caracteres, use --body-file." ;;
