@@ -102,6 +102,11 @@ caso 2 develop 'gh pr merge 1 --merge ${X}--squash'
 caso 2 develop 'gh pr merge 1 --merge --body "$(echo x)"'
 # shellcheck disable=SC2016  # idem
 caso 2 develop 'gh pr merge $PR --merge'
+# Expansão de chaves: o bash entrega --squash sem $, crase nem \ (achado 🟡 da 4ª revisão)
+caso 2 develop 'gh pr merge 12 --merge {--squash,x}'
+caso 2 develop 'gh pr merge 12 --merge --{squash,x}'
+# Falso bloqueio aceito, como o do $
+caso 2 develop 'gh pr merge 12 --merge --body "fix {x}"'
 # Falso bloqueio aceito: não dá para saber se o $ é literal (aspas simples) sem reimplementar o shell
 caso 2 develop "gh pr merge 1 --merge --body 'custa \$5'"
 # Guardas: só o segmento do 'gh pr merge' é afetado
