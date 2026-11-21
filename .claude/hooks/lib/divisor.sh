@@ -70,33 +70,35 @@ _tokenizar_fechar() {
   if [[ $tem -eq 1 ]]; then
     TOK+=("$atual")
     TOK_CITADO+=("$citado")
+    TOK_MASCARA+=("$mascara")
   fi
-  atual=""; tem=0; citado=0
+  atual=""; mascara=""; tem=0; citado=0
 }
 
 # Quebra UM segmento em palavras, como o shell as entregaria ao programa (sem aspas nem barras de proteção).
-# Deixa em TOK as palavras, em TOK_CITADO (1 se a palavra teve aspas ou barra), em ININTERPRETAVEL (1 se há
-# aspa sem fechar) e em MOTIVO (o porquê, ou vazio). As palavras se separam em espaço, tab e quebra de linha.
+# Deixa em TOK as palavras, em TOK_CITADO (1 se a palavra teve aspas ou barra), em TOK_MASCARA (uma letra por
+# letra da palavra: 1 se veio de aspas ou barra, 0 se foi escrita solta), em ININTERPRETAVEL (1 se há aspa sem
+# fechar) e em MOTIVO (o porquê, ou vazio). As palavras se separam em espaço, tab e quebra de linha.
 tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
-  local seg="$1" tam="${#1}" i c prox atual="" tem=0 citado=0 aspa=""
+  local seg="$1" tam="${#1}" i c prox atual="" mascara="" tem=0 citado=0 aspa=""
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); ININTERPRETAVEL=0; MOTIVO=""
   for ((i = 0; i < tam; i++)); do
     c="${seg:i:1}"
     prox="${seg:i+1:1}"
 
     if [[ "$aspa" == "'" ]]; then        # aspas simples: tudo é literal até a aspa que fecha
-      if [[ "$c" == "'" ]]; then aspa=""; else atual+="$c"; fi
+      if [[ "$c" == "'" ]]; then aspa=""; else atual+="$c"; mascara+="1"; fi
     elif [[ "$aspa" == '"' ]]; then      # aspas duplas: só a barra tem efeito
       if [[ "$c" == '"' ]]; then
         aspa=""
       elif [[ "$c" == $'\\' ]]; then
         case "$prox" in
-          '"' | $'\\' | '$' | '`') atual+="$prox"; i=$((i + 1)) ;;   # a barra protege só estas 4 letras
-          *) atual+="$c" ;;                                          # em "\b" a barra fica
+          '"' | $'\\' | '$' | '`') atual+="$prox"; mascara+="1"; i=$((i + 1)) ;;   # a barra protege só estas 4 letras
+          *) atual+="$c"; mascara+="1" ;;                                          # em "\b" a barra fica
         esac
       else
-        atual+="$c"
+        atual+="$c"; mascara+="1"
       fi
     else                                 # fora de aspas
       case "$c" in
@@ -105,10 +107,12 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
           if [[ "$prox" == $'\n' ]]; then
             i=$((i + 1))                           # barra + quebra de linha: continuação, some
           else
-            atual+="$prox"; tem=1; citado=1; i=$((i + 1))   # a barra protege a letra seguinte
+            tem=1; citado=1
+            if [[ -n "$prox" ]]; then atual+="$prox"; mascara+="1"; fi   # a barra protege a letra seguinte
+            i=$((i + 1))
           fi ;;
         ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
-        *) atual+="$c"; tem=1 ;;
+        *) atual+="$c"; mascara+="0"; tem=1 ;;
       esac
     fi
   done
@@ -119,10 +123,81 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   fi
 }
 
+# Trata um trecho de palavra achado por separar_redirecionamentos: se um operador está esperando o alvo, o
+# trecho é o alvo; senão, é uma palavra. Usa a variável "alvo" de quem chamou (ver _divisor_fechar).
+_redir_emitir() {   # $1 = o trecho, $2 = a máscara dele, $3 = 1 para emitir mesmo vazio (palavra "")
+  local p="$1" mk="$2" forcar="${3:-0}" cit=0
+  [[ -z "$p" && "$forcar" -ne 1 ]] && return 0
+  [[ "$mk" == *1* ]] && cit=1
+  case "$alvo" in
+    esc) REDIR_ESCRITA+=("$p"); alvo="" ;;
+    lei) REDIR_LEITURA+=("$p"); alvo="" ;;
+    ign) alvo="" ;;
+    dup_esc | dup_lei)
+      if ! [[ "$p" =~ ^[0-9]+$ || "$p" == - ]]; then   # ">&2" e ">&-" duplicam um descritor; ">& out" é arquivo
+        if [[ "$alvo" == dup_esc ]]; then REDIR_ESCRITA+=("$p"); else REDIR_LEITURA+=("$p"); fi
+      fi
+      alvo="" ;;
+    *) TOK+=("$p"); TOK_CITADO+=("$cit"); TOK_MASCARA+=("$mk") ;;
+  esac
+}
+
 # Tira de TOK os redirecionamentos (>, >>, >|, &>, >&, <, <<, <<<, 2>&1...) e os alvos deles.
 # Deixa em REDIR_ESCRITA os arquivos em que se escreve e em REDIR_LEITURA os que se leem. Só conta o operador
 # escrito solto: um ">" dentro de aspas ou protegido por barra (máscara 1 em TOK_MASCARA) é texto.
-# T4: esqueleto vazio; o corpo vem na fase verde.
+# Se faltar o alvo do operador (por exemplo "echo x >"), marca ININTERPRETAVEL: é erro de sintaxe no shell.
+# Regras: o operador é > >> >| >& &> &>> < <& <> << <<- <<<; "2>" e "1>" têm um descritor na frente, que não
+# é palavra; ">&" e "<&" seguidos de número ou "-" duplicam um descritor e não têm arquivo; "<<" e "<<<" têm
+# delimitador ou texto, não arquivo, e por isso não entram em REDIR_LEITURA.
 separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que tokenizar_segmento deixou)
-  REDIR_ESCRITA=(); REDIR_LEITURA=()
+  local LC_ALL=C
+  local -a tok=("${TOK[@]}") msk=("${TOK_MASCARA[@]}")
+  local k i j n t m c nx op palavra pmasc alvo=""
+  TOK=(); TOK_CITADO=(); TOK_MASCARA=(); REDIR_ESCRITA=(); REDIR_LEITURA=()
+  for ((k = 0; k < ${#tok[@]}; k++)); do
+    t="${tok[k]}"; m="${msk[k]}"; n=${#t}; palavra=""; pmasc=""
+    if ((n == 0)); then _redir_emitir "" "" 1; continue; fi   # palavra vazia entre aspas: ""
+    for ((i = 0; i < n; i++)); do
+      c="${t:i:1}"
+      if [[ "${m:i:1}" != 0 || ( "$c" != '<' && "$c" != '>' ) ]]; then
+        palavra+="$c"; pmasc+="${m:i:1}"                      # letra comum (ou < > protegido por aspas ou barra)
+        continue
+      fi
+      # Achou um operador solto. O que veio antes dele, colado:
+      if [[ "$c" == '>' && "$palavra" == *'&' && "${pmasc: -1}" == 0 ]]; then
+        palavra="${palavra%&}"; pmasc="${pmasc%?}"            # "--squash&>x": o & é do operador (&>)
+      elif [[ "$palavra" =~ ^[0-9]+$ && "$pmasc" != *1* ]]; then
+        palavra=""; pmasc=""                                  # "2>", "1>": descritor solto, não é palavra
+      fi
+      [[ -n "$palavra" ]] && _redir_emitir "$palavra" "$pmasc"
+      palavra=""; pmasc=""
+      if [[ -n "$alvo" ]]; then                               # um operador sem alvo antes deste
+        ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; alvo=""
+      fi
+      # Lê o operador inteiro.
+      op="$c"; j=$((i + 1)); nx="${t:j:1}"
+      if [[ "$c" == '>' ]]; then
+        if [[ "${m:j:1}" == 0 && ( "$nx" == '>' || "$nx" == '|' || "$nx" == '&' ) ]]; then op+="$nx"; j=$((j + 1)); fi
+      elif [[ "${m:j:1}" == 0 ]]; then
+        case "$nx" in
+          '<')
+            op+="<"; j=$((j + 1))
+            if [[ "${m:j:1}" == 0 && "${t:j:1}" == '<' ]]; then op+="<"; j=$((j + 1))
+            elif [[ "${m:j:1}" == 0 && "${t:j:1}" == '-' ]]; then op+="-"; j=$((j + 1)); fi ;;
+          '&') op+="&"; j=$((j + 1)) ;;
+          '>') op+=">"; j=$((j + 1)) ;;
+        esac
+      fi
+      case "$op" in
+        '>' | '>>' | '>|' | '<>') alvo=esc ;;
+        '>&') alvo=dup_esc ;;
+        '<') alvo=lei ;;
+        '<&') alvo=dup_lei ;;
+        *) alvo=ign ;;                                        # << <<- <<<
+      esac
+      i=$((j - 1))
+    done
+    [[ -n "$palavra" ]] && _redir_emitir "$palavra" "$pmasc"
+  done
+  if [[ -n "$alvo" ]]; then ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; fi
 }
