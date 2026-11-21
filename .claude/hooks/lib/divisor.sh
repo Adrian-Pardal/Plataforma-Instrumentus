@@ -13,21 +13,35 @@ _divisor_fechar() {
   atual=""
 }
 
-# Lê o delimitador de um heredoc ("<<EOF", "<<-EOF", "<<'EOF'", "<<\EOF") a partir de cmd[i] e o guarda em
+# Parte um texto em letras (bytes) e guarda no array cujo nome vem em $2: array[i] é a letra i.
+# Existe porque ${texto:i:1} custa O(tamanho) a cada chamada, e um laço que o usa em cada letra fica
+# quadrático (20 KB levavam ~2 s por etapa). Aqui o texto é lido uma única vez (linear); depois,
+# array[i] é instantâneo. Depois da última letra vêm 3 posições vazias: quem olha à frente (i+1, i+2)
+# recebe vazio no fim do texto, como ${texto:i:1} dava, e não "unbound variable" sob "set -u".
+_divisor_letras() {   # $1 = o texto, $2 = o nome do array que recebe as letras
+  local LC_ALL=C
+  local -n _letras="$2"
+  local texto="$1" n=${#1} k c
+  _letras=()
+  for ((k = 0; k < n; k++)); do IFS= read -r -N1 c; _letras[k]="$c"; done <<<"$texto"
+  _letras[n]=""; _letras[n + 1]=""; _letras[n + 2]=""
+}
+
+# Lê o delimitador de um heredoc ("<<EOF","<<-EOF", "<<'EOF'", "<<\EOF") a partir de cmd[i] e o guarda em
 # hd_delim, com hd_quoted (1 se o delimitador veio entre aspas ou com barra: o corpo é literal) e hd_tab (1 se
-# "<<-": o terminador pode vir com tabs na frente). Usa cmd, i, tam e os hd_* de quem chamou.
+# "<<-": o terminador pode vir com tabs na frente). Usa L (as letras de cmd), i, tam e os hd_* de quem chamou.
 _divisor_registrar_heredoc() {
   local j=$((i + 2)) tab=0 quoted=0 delim="" ch q
-  if [[ "${cmd:j:1}" == '-' ]]; then tab=1; j=$((j + 1)); fi
-  while [[ "${cmd:j:1}" == ' ' || "${cmd:j:1}" == $'\t' ]]; do j=$((j + 1)); done
+  if [[ "${L[j]}" == '-' ]]; then tab=1; j=$((j + 1)); fi
+  while [[ "${L[j]}" == ' ' || "${L[j]}" == $'\t' ]]; do j=$((j + 1)); done
   while ((j < tam)); do               # o delimitador é uma palavra: aspas e barras podem aparecer no meio (E"O"F)
-    ch="${cmd:j:1}"
+    ch="${L[j]}"
     case "$ch" in
       "'" | '"')                        # entre aspas: o shell tira as aspas e fica só o que está dentro
         quoted=1; q="$ch"; j=$((j + 1))
-        while ((j < tam)) && [[ "${cmd:j:1}" != "$q" ]]; do delim+="${cmd:j:1}"; j=$((j + 1)); done
+        while ((j < tam)) && [[ "${L[j]}" != "$q" ]]; do delim+="${L[j]}"; j=$((j + 1)); done
         j=$((j + 1)); continue ;;
-      $'\\') quoted=1; j=$((j + 1)); delim+="${cmd:j:1}"; j=$((j + 1)); continue ;;   # "<<\EOF", "<<EO\F"
+      $'\\') quoted=1; j=$((j + 1)); delim+="${L[j]}"; j=$((j + 1)); continue ;;   # "<<\EOF", "<<EO\F"
       ' ' | $'\t' | $'\n' | ';' | '&' | '|' | '<' | '>' | '(' | ')') break ;;
     esac
     delim+="$ch"; j=$((j + 1))
@@ -64,17 +78,19 @@ _divisor_ler_corpos() {
 # "\;" não separa, "\"" não abre nem fecha aspas, e "\" + quebra de linha continua o comando.
 # Um # no começo de palavra abre comentário até o fim da linha ("echo x # it's" não deixa aspa aberta).
 dividir_comando() {   # $1 = o texto do comando
-  # Letra por letra em bytes (LC_ALL=C): em UTF-8 o bash conta caracteres a cada ${cmd:i:1} e fica quadrático
-  # (14 KB levava 5,5 s). Só os separadores importam e todos são ASCII; os bytes de acentos passam inteiros.
+  # Letra por letra em bytes (LC_ALL=C): só os separadores importam e todos são ASCII; os bytes de acentos
+  # passam inteiros. As letras vêm de _divisor_letras (array L), porque ${cmd:i:1} é quadrático (ver lá).
   local LC_ALL=C
   local cmd="$1" tam="${#1}" i c ant prox atual="" aspa=""
   local dolar=0 dolar_prev=0 escapou=0 escapou_prev=0 arit=0   # contexto da letra anterior e $((...)) aberto
   local -a hd_delim=() hd_quoted=() hd_tab=()   # heredocs da linha, à espera do corpo (ver _divisor_ler_corpos)
+  local -a L
+  _divisor_letras "$cmd" L
   SEGMENTOS=()
   for ((i = 0; i < tam; i++)); do
-    c="${cmd:i:1}"
-    prox="${cmd:i+1:1}"                  # a letra seguinte (vazia no fim do texto)
-    ant=""; ((i > 0)) && ant="${cmd:i-1:1}"   # a letra anterior (vazia no começo)
+    c="${L[i]}"
+    prox="${L[i+1]}"                     # a letra seguinte (vazia no fim do texto)
+    ant=""; ((i > 0)) && ant="${L[i-1]}"   # a letra anterior (vazia no começo)
     dolar_prev=$dolar; dolar=0           # a letra anterior foi um "$" solto? (para reconhecer $'...')
     escapou_prev=$escapou; escapou=0     # a letra anterior foi protegida por barra?
 
@@ -101,13 +117,13 @@ dividir_comando() {   # $1 = o texto do comando
       '#')
         if [[ ($escapou_prev -eq 0) && ( -z "$ant" || "$ant" == ' ' || "$ant" == $'\t' || "$ant" == $'\n' \
           || "$ant" == ';' || "$ant" == '&' || "$ant" == '|' || "$ant" == '(' ) ]]; then
-          while ((i + 1 < tam)) && [[ "${cmd:i+1:1}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: some até a quebra de linha
+          while ((i + 1 < tam)) && [[ "${L[i+1]}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: some até a quebra de linha
         else
           atual+="$c"                                        # "a#b", "$#": não é comentário
         fi ;;
       '$')
         atual+="$c"; dolar=1
-        if [[ "$prox" == '(' && "${cmd:i+2:1}" == '(' ]]; then
+        if [[ "$prox" == '(' && "${L[i+2]}" == '(' ]]; then
           atual+="(("; i=$((i + 2)); arit=2; dolar=0         # "$((": aritmética, o "<<" de dentro não é heredoc
         fi ;;
       '(') atual+="$c"; if ((arit > 0)); then arit=$((arit + 1)); fi ;;
@@ -120,7 +136,7 @@ dividir_comando() {   # $1 = o texto do comando
       '<')
         atual+="$c"
         # "<<" que não é "<<<" (here-string): heredoc. Guarda o delimitador; o corpo é lido no fim da linha.
-        if ((arit == 0)) && [[ "$prox" == '<' && "${cmd:i+2:1}" != '<' && "$ant" != '<' ]]; then _divisor_registrar_heredoc; fi ;;
+        if ((arit == 0)) && [[ "$prox" == '<' && "${L[i+2]}" != '<' && "$ant" != '<' ]]; then _divisor_registrar_heredoc; fi ;;
       '|')
         if [[ "$ant" == '>' ]]; then
           atual+="$c"                                      # ">|" é redirecionamento, não pipe
@@ -162,10 +178,12 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
   local seg="$1" tam="${#1}" i c prox atual="" mascara="" tem=0 citado=0 aspa="" expande=0 obscuro=0
   local dolar=0 dolar_prev=0 escapou=0 escapou_prev=0   # contexto da letra anterior (ver dividir_comando)
+  local -a L
+  _divisor_letras "$seg" L
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); ININTERPRETAVEL=0; MOTIVO=""
   for ((i = 0; i < tam; i++)); do
-    c="${seg:i:1}"
-    prox="${seg:i+1:1}"
+    c="${L[i]}"
+    prox="${L[i+1]}"
     dolar_prev=$dolar; dolar=0; escapou_prev=$escapou; escapou=0
 
     if [[ "$aspa" == "'" ]]; then        # aspas simples: tudo é literal até a aspa que fecha
@@ -218,7 +236,7 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
         ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
         '#')
           if ((tem == 0 && escapou_prev == 0)); then
-            while ((i + 1 < tam)) && [[ "${seg:i+1:1}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: ignora até a quebra
+            while ((i + 1 < tam)) && [[ "${L[i+1]}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: ignora até a quebra
           else
             atual+="$c"; mascara+="0"; tem=1         # "a#b": faz parte da palavra
           fi ;;
@@ -272,14 +290,20 @@ separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que token
   local LC_ALL=C
   local -a tok=("${TOK[@]}") msk=("${TOK_MASCARA[@]}")
   local k i j n t m c nx op palavra pmasc alvo=""
+  local -a LT LM   # as letras da palavra e as da máscara (ver _divisor_letras)
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); REDIR_ESCRITA=(); REDIR_LEITURA=()
   for ((k = 0; k < ${#tok[@]}; k++)); do
     t="${tok[k]}"; m="${msk[k]}"; n=${#t}; palavra=""; pmasc=""
     if ((n == 0)); then _redir_emitir "" "" 1; continue; fi   # palavra vazia entre aspas: ""
+    if [[ "$t" != *[\<\>]* || "$m" != *0* ]]; then
+      palavra="$t"; pmasc="$m"; n=0                           # sem < nem > soltos: a palavra passa inteira, não há o que separar
+    else
+      _divisor_letras "$t" LT; _divisor_letras "$m" LM
+    fi
     for ((i = 0; i < n; i++)); do
-      c="${t:i:1}"
-      if [[ "${m:i:1}" != 0 || ( "$c" != '<' && "$c" != '>' ) ]]; then
-        palavra+="$c"; pmasc+="${m:i:1}"                      # letra comum (ou < > protegido por aspas ou barra)
+      c="${LT[i]}"
+      if [[ "${LM[i]}" != 0 || ( "$c" != '<' && "$c" != '>' ) ]]; then
+        palavra+="$c"; pmasc+="${LM[i]}"                      # letra comum (ou < > protegido por aspas ou barra)
         continue
       fi
       # Achou um operador solto. O que veio antes dele, colado:
@@ -294,15 +318,15 @@ separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que token
         ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; alvo=""
       fi
       # Lê o operador inteiro.
-      op="$c"; j=$((i + 1)); nx="${t:j:1}"
+      op="$c"; j=$((i + 1)); nx="${LT[j]}"
       if [[ "$c" == '>' ]]; then
-        if [[ "${m:j:1}" == 0 && ( "$nx" == '>' || "$nx" == '|' || "$nx" == '&' ) ]]; then op+="$nx"; j=$((j + 1)); fi
-      elif [[ "${m:j:1}" == 0 ]]; then
+        if [[ "${LM[j]}" == 0 && ( "$nx" == '>' || "$nx" == '|' || "$nx" == '&' ) ]]; then op+="$nx"; j=$((j + 1)); fi
+      elif [[ "${LM[j]}" == 0 ]]; then
         case "$nx" in
           '<')
             op+="<"; j=$((j + 1))
-            if [[ "${m:j:1}" == 0 && "${t:j:1}" == '<' ]]; then op+="<"; j=$((j + 1))
-            elif [[ "${m:j:1}" == 0 && "${t:j:1}" == '-' ]]; then op+="-"; j=$((j + 1)); fi ;;
+            if [[ "${LM[j]}" == 0 && "${LT[j]}" == '<' ]]; then op+="<"; j=$((j + 1))
+            elif [[ "${LM[j]}" == 0 && "${LT[j]}" == '-' ]]; then op+="-"; j=$((j + 1)); fi ;;
           '&') op+="&"; j=$((j + 1)) ;;
           '>') op+=">"; j=$((j + 1)) ;;
         esac
@@ -445,12 +469,16 @@ _desemb_env_tem_s() {
 # Se sobraram mais ")" soltos do que "(" soltos (o divisor cortou um "( cd /x; git push --force)" no ";"), tira os
 # ")" a mais do fim da última palavra. ")" e "(" entre aspas ou protegidos por barra não contam.
 _desemb_aparar_parenteses() {
+  local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
   local k c n abre=0 fecha=0 u
+  local -a LT LM   # as letras da palavra e as da máscara (ver _divisor_letras)
   for ((k = 0; k < ${#tok[@]}; k++)); do
     n=${#tok[k]}
+    [[ "${tok[k]}" == *[\(\)]* && "${msk[k]}" == *0* ]] || continue   # só conta parêntese solto: sem ele não há o que contar
+    _divisor_letras "${tok[k]}" LT; _divisor_letras "${msk[k]}" LM
     for ((c = 0; c < n; c++)); do
-      [[ "${msk[k]:c:1}" == 0 ]] || continue
-      case "${tok[k]:c:1}" in '(') abre=$((abre + 1)) ;; ')') fecha=$((fecha + 1)) ;; esac
+      [[ "${LM[c]}" == 0 ]] || continue
+      case "${LT[c]}" in '(') abre=$((abre + 1)) ;; ')') fecha=$((fecha + 1)) ;; esac
     done
   done
   while ((fecha > abre && ${#tok[@]} > 0)); do
