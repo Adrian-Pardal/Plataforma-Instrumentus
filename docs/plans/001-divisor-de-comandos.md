@@ -93,7 +93,7 @@ PR 1a (divisor):
 - [x] T4 [infra] — `separar_redirecionamentos` com `REDIR_ESCRITA` e `REDIR_LEITURA` (`>`, `>>`, `<`, `<<<`,
   `2>&1`, `&>`, `>|`, colados a palavra e a texto citado), com os casos do ERR-001 e ERR-002 · Cobre: D1 ·
   Teste: divisor.test.sh › redirecionamentos (90 min)
-- [ ] T5 [infra] — `achar_subcomando` para `gh` e `git`, com `DIR_GIT` e a tabela de flags acima; testes
+- [x] T5 [infra] — `achar_subcomando` para `gh` e `git`, com `DIR_GIT` e a tabela de flags acima; testes
   `git --config-env a=B push`, `git --attr-source HEAD push`, `gh -R x pr merge`, `gh pr -R x merge`,
   `gh --paginate=true api` · Cobre: D2 · Teste: divisor.test.sh › subcomando (90 min)
 - [ ] T6 [infra] — `desembrulhar`: `env`, `command`, `xargs` sem flags, `sudo`, `nohup`, `time` e subshell ·
