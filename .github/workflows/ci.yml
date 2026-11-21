@@ -84,6 +84,33 @@ jobs:
       - name: Rodar a verificação completa
         run: scripts/verify.sh full
 
+  # Se a main falhar, abre uma issue "CI falhou na main" com o link do log (sem duplicar).
+  # A lógica fica em scripts/abrir-issue-ci.sh (testado com gh falso); aqui só se liga o gatilho.
+  # Só roda em push na main. Com "failure()", roda se qualquer job de "needs" falhar (inclusive o
+  # "verificar" ser pulado porque o "seguranca" falhou).
+  registrar-falha:
+    needs: [seguranca, verificar]
+    if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write   # criar a issue e consultar as abertas
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Abrir a issue (se ainda não houver uma aberta)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: scripts/abrir-issue-ci.sh
+
   # --- Entram depois -------------------------------------------------------
   # TODO(codeql): ativar quando houver código Java/JavaScript. Só este job recebe security-events: write.
   # codeql:

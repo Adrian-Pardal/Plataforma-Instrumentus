@@ -39,7 +39,7 @@ permissões `contents: read` e `issues: write`.
 - [x] T2 [infra] — `scripts/abrir-issue-ci.sh` · Cobre: pedido 4 · Teste: abrir-issue-ci.test.sh (30 min)
 - [x] T3 [infra] — formulários `bug.yml`, `erro-ia.yml` e `ambiente.yml` em `.github/ISSUE_TEMPLATE/` ·
   Cobre: pedido 2 · Teste: conferência manual em "New issue" (30 min)
-- [ ] T4 [infra] — job `registrar-falha` no `ci.yml` · Cobre: pedido 4 · Teste: actionlint + abrir-issue-ci.test.sh (30 min)
+- [x] T4 [infra] — job `registrar-falha` no `ci.yml` · Cobre: pedido 4 · Teste: actionlint + abrir-issue-ci.test.sh (30 min)
 - [ ] T5 [infra] — frase no CLAUDE.md (§6) e uma linha na skill `registrar-erro` (campo `issue`) · Cobre: pedidos
   3 e 5 · Teste: leitura (15 min)
 - [ ] T6 [infra] — página `docs/help/ferramentas/registro-de-erros.md` (etiquetas, modelos, issue de CI),
