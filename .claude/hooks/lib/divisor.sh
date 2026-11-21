@@ -15,22 +15,31 @@ _divisor_fechar() {
 
 # Divide um comando do shell em segmentos (um por comando) e deixa o resultado em SEGMENTOS.
 # Lê o texto uma letra por vez. Separadores: & && || ; | |& e quebra de linha, fora de aspas.
-# Versão simples: aspas simples e duplas, sem tratar escape (\). O resto vem nas próximas tasks.
+# A barra \ protege a letra seguinte (fora de aspas e dentro de aspas duplas, não dentro de aspas simples):
+# "\;" não separa, "\"" não abre nem fecha aspas, e "\" + quebra de linha continua o comando.
 dividir_comando() {   # $1 = o texto do comando
-  local cmd="$1" i c ant prox atual="" aspa=""
+  # Letra por letra em bytes (LC_ALL=C): em UTF-8 o bash conta caracteres a cada ${cmd:i:1} e fica quadrático
+  # (14 KB levava 5,5 s). Só os separadores importam e todos são ASCII; os bytes de acentos passam inteiros.
+  local LC_ALL=C
+  local cmd="$1" tam="${#1}" i c ant prox atual="" aspa=""
   SEGMENTOS=()
-  for ((i = 0; i < ${#cmd}; i++)); do
+  for ((i = 0; i < tam; i++)); do
     c="${cmd:i:1}"
     prox="${cmd:i+1:1}"                  # a letra seguinte (vazia no fim do texto)
     ant=""; ((i > 0)) && ant="${cmd:i-1:1}"   # a letra anterior (vazia no começo)
 
     if [[ -n "$aspa" ]]; then            # dentro de aspas: nada separa, só acumula
+      if [[ "$aspa" == '"' && "$c" == $'\\' ]]; then
+        atual+="$c$prox"; i=$((i + 1))   # em aspas duplas, a barra protege a letra seguinte (\")
+        continue
+      fi
       atual+="$c"
       [[ "$c" == "$aspa" ]] && aspa=""   # achou a aspa que fecha
       continue
     fi
 
     case "$c" in
+      $'\\') atual+="$c$prox"; i=$((i + 1)) ;;   # fora de aspas, a barra protege a letra seguinte
       '"' | "'") aspa="$c"; atual+="$c" ;;   # abriu aspas
       ';' | $'\n') _divisor_fechar ;;
       '|')
