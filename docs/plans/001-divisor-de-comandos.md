@@ -96,7 +96,7 @@ PR 1a (divisor):
 - [x] T5 [infra] — `achar_subcomando` para `gh` e `git`, com `DIR_GIT` e a tabela de flags acima; testes
   `git --config-env a=B push`, `git --attr-source HEAD push`, `gh -R x pr merge`, `gh pr -R x merge`,
   `gh --paginate=true api` · Cobre: D2 · Teste: divisor.test.sh › subcomando (90 min)
-- [ ] T6 [infra] — `desembrulhar`: `env`, `command`, `xargs` sem flags, `sudo`, `nohup`, `time` e subshell ·
+- [x] T6 [infra] — `desembrulhar`: `env`, `command`, `xargs` sem flags, `sudo`, `nohup`, `time` e subshell ·
   Cobre: D3 · Teste: divisor.test.sh › wrappers (60 min)
 - [ ] T7 [infra] — falha fechada com a regra por subcomando, heredoc (`<<`, `<<-`) e `$(`/crase só em aspas
   duplas ou sem aspas · Cobre: D4 · Teste: divisor.test.sh › falha fechada (60 min)
