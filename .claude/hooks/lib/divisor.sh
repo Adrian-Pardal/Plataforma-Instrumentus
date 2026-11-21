@@ -402,6 +402,97 @@ _redir_emitir() {   # $1 = o trecho, $2 = a máscara dele, $3 = 1 para emitir me
   esac
 }
 
+# Os helpers _redir_* usam as variáveis locais de separar_redirecionamentos (tok, msk, k, i, j, n, t, m, c, nx, op,
+# palavra, pmasc, alvo, LT, LM), como _redir_emitir.
+
+# "--squash&>x": o & colado é do operador (&>). "2>" e "1>": descritor solto, que não é palavra.
+_redir_descritor_colado() {
+  if [[ "$c" == '>' && "$palavra" == *'&' && "${pmasc: -1}" == 0 ]]; then
+    palavra="${palavra%&}"; pmasc="${pmasc%?}"
+  elif [[ "$palavra" =~ ^[0-9]+$ && "$pmasc" != *1* ]]; then
+    palavra=""; pmasc=""
+  fi
+}
+
+# Achou um operador solto: emite o que veio antes dele, colado, e avisa se o operador anterior ficou sem alvo.
+_redir_antes_do_operador() {
+  _redir_descritor_colado
+  [[ -n "$palavra" ]] && _redir_emitir "$palavra" "$pmasc"
+  palavra=""; pmasc=""
+  if [[ -n "$alvo" ]]; then                               # um operador sem alvo antes deste
+    ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; alvo=""
+  fi
+}
+
+# Operador de saída: ">" pode virar ">>", ">|" ou ">&".
+_redir_ler_operador_saida() {
+  if [[ "${LM[j]}" == 0 && ( "$nx" == '>' || "$nx" == '|' || "$nx" == '&' ) ]]; then op+="$nx"; j=$((j + 1)); fi
+}
+
+# Depois de "<<": "<<<" (here-string) ou "<<-" (heredoc com tabs).
+_redir_heredoc_ou_traco() {
+  if [[ "${LM[j]}" == 0 && "${LT[j]}" == '<' ]]; then op+="<"; j=$((j + 1))
+  elif [[ "${LM[j]}" == 0 && "${LT[j]}" == '-' ]]; then op+="-"; j=$((j + 1)); fi
+}
+
+# Operador de entrada: "<" pode virar "<<", "<<<", "<<-", "<&" ou "<>".
+_redir_ler_operador_entrada() {
+  case "$nx" in
+    '<') op+="<"; j=$((j + 1)); _redir_heredoc_ou_traco ;;
+    '&') op+="&"; j=$((j + 1)) ;;
+    '>') op+=">"; j=$((j + 1)) ;;
+  esac
+}
+
+# Lê o operador inteiro a partir de t[i]: deixa em op o texto dele e em j a posição seguinte.
+_redir_ler_operador() {
+  op="$c"; j=$((i + 1)); nx="${LT[j]}"
+  if [[ "$c" == '>' ]]; then
+    _redir_ler_operador_saida
+  elif [[ "${LM[j]}" == 0 ]]; then
+    _redir_ler_operador_entrada
+  fi
+}
+
+# O que o operador espera em seguida: um arquivo de saída, um de leitura, um descritor ou nada (<< <<- <<<).
+_redir_definir_alvo() {
+  case "$op" in
+    '>' | '>>' | '>|' | '<>') alvo=esc ;;
+    '>&') alvo=dup_esc ;;
+    '<') alvo=lei ;;
+    '<&') alvo=dup_lei ;;
+    *) alvo=ign ;;                                        # << <<- <<<
+  esac
+}
+
+# Trata a letra i da palavra: letra comum (ou < > protegido por aspas ou barra) vai para a palavra; um operador solto
+# é emitido e lido inteiro (i passa a apontar para a última letra dele).
+_redir_letra() {
+  c="${LT[i]}"
+  if [[ "${LM[i]}" != 0 || ( "$c" != '<' && "$c" != '>' ) ]]; then
+    palavra+="$c"; pmasc+="${LM[i]}"
+    return 0
+  fi
+  _redir_antes_do_operador
+  _redir_ler_operador
+  _redir_definir_alvo
+  i=$((j - 1))
+}
+
+# Trata a palavra k de tok. Sem < nem > soltos ela passa inteira; senão é lida letra por letra.
+_redir_palavra() {
+  t="${tok[k]}"; m="${msk[k]}"; n=${#t}; palavra=""; pmasc=""
+  if ((n == 0)); then _redir_emitir "" "" 1; return 0; fi   # palavra vazia entre aspas: ""
+  if [[ "$t" != *[\<\>]* || "$m" != *0* ]]; then
+    palavra="$t"; pmasc="$m"
+  else
+    _divisor_letras "$t" LT; _divisor_letras "$m" LM
+    for ((i = 0; i < n; i++)); do _redir_letra; done
+  fi
+  [[ -n "$palavra" ]] && _redir_emitir "$palavra" "$pmasc"
+  return 0
+}
+
 # Tira de TOK os redirecionamentos (>, >>, >|, &>, >&, <, <<, <<<, 2>&1...) e os alvos deles.
 # Deixa em REDIR_ESCRITA os arquivos em que se escreve e em REDIR_LEITURA os que se leem. Só conta o operador
 # escrito solto: um ">" dentro de aspas ou protegido por barra (máscara 1 em TOK_MASCARA) é texto.
@@ -415,56 +506,7 @@ separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que token
   local k i j n t m c nx op palavra pmasc alvo=""
   local -a LT LM   # as letras da palavra e as da máscara (ver _divisor_letras)
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); REDIR_ESCRITA=(); REDIR_LEITURA=()
-  for ((k = 0; k < ${#tok[@]}; k++)); do
-    t="${tok[k]}"; m="${msk[k]}"; n=${#t}; palavra=""; pmasc=""
-    if ((n == 0)); then _redir_emitir "" "" 1; continue; fi   # palavra vazia entre aspas: ""
-    if [[ "$t" != *[\<\>]* || "$m" != *0* ]]; then
-      palavra="$t"; pmasc="$m"; n=0                           # sem < nem > soltos: a palavra passa inteira, não há o que separar
-    else
-      _divisor_letras "$t" LT; _divisor_letras "$m" LM
-    fi
-    for ((i = 0; i < n; i++)); do
-      c="${LT[i]}"
-      if [[ "${LM[i]}" != 0 || ( "$c" != '<' && "$c" != '>' ) ]]; then
-        palavra+="$c"; pmasc+="${LM[i]}"                      # letra comum (ou < > protegido por aspas ou barra)
-        continue
-      fi
-      # Achou um operador solto. O que veio antes dele, colado:
-      if [[ "$c" == '>' && "$palavra" == *'&' && "${pmasc: -1}" == 0 ]]; then
-        palavra="${palavra%&}"; pmasc="${pmasc%?}"            # "--squash&>x": o & é do operador (&>)
-      elif [[ "$palavra" =~ ^[0-9]+$ && "$pmasc" != *1* ]]; then
-        palavra=""; pmasc=""                                  # "2>", "1>": descritor solto, não é palavra
-      fi
-      [[ -n "$palavra" ]] && _redir_emitir "$palavra" "$pmasc"
-      palavra=""; pmasc=""
-      if [[ -n "$alvo" ]]; then                               # um operador sem alvo antes deste
-        ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; alvo=""
-      fi
-      # Lê o operador inteiro.
-      op="$c"; j=$((i + 1)); nx="${LT[j]}"
-      if [[ "$c" == '>' ]]; then
-        if [[ "${LM[j]}" == 0 && ( "$nx" == '>' || "$nx" == '|' || "$nx" == '&' ) ]]; then op+="$nx"; j=$((j + 1)); fi
-      elif [[ "${LM[j]}" == 0 ]]; then
-        case "$nx" in
-          '<')
-            op+="<"; j=$((j + 1))
-            if [[ "${LM[j]}" == 0 && "${LT[j]}" == '<' ]]; then op+="<"; j=$((j + 1))
-            elif [[ "${LM[j]}" == 0 && "${LT[j]}" == '-' ]]; then op+="-"; j=$((j + 1)); fi ;;
-          '&') op+="&"; j=$((j + 1)) ;;
-          '>') op+=">"; j=$((j + 1)) ;;
-        esac
-      fi
-      case "$op" in
-        '>' | '>>' | '>|' | '<>') alvo=esc ;;
-        '>&') alvo=dup_esc ;;
-        '<') alvo=lei ;;
-        '<&') alvo=dup_lei ;;
-        *) alvo=ign ;;                                        # << <<- <<<
-      esac
-      i=$((j - 1))
-    done
-    [[ -n "$palavra" ]] && _redir_emitir "$palavra" "$pmasc"
-  done
+  for ((k = 0; k < ${#tok[@]}; k++)); do _redir_palavra; done
   if [[ -n "$alvo" ]]; then ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; fi
 }
 
