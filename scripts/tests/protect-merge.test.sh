@@ -9,10 +9,12 @@ FALSO="$(mktemp -d)"; trap 'rm -rf "$FALSO"' EXIT
 falhas=0
 
 # gh falso: "gh pr view ..." imprime $FAKE_BASE; se for "erro", falha como o gh real sem rede ou sem PR.
+# Também falha se algum argumento tiver > ou < (o gh real não acha PR chamado "2>&1": ERR-002).
 # As aspas simples são de propósito: o $1 e o ${FAKE_BASE} devem ser lidos pelo gh falso, não aqui.
 # shellcheck disable=SC2016
 printf '%s\n' '#!/usr/bin/env bash' \
   '[[ "$1 $2" == "pr view" ]] || exit 9' \
+  '[[ "$*" != *[\<\>]* ]] || exit 1' \
   '[[ "${FAKE_BASE:-develop}" != erro ]] || exit 1' \
   'echo "${FAKE_BASE:-develop}"' > "$FALSO/gh"
 chmod +x "$FALSO/gh"
@@ -45,6 +47,100 @@ caso 0 develop 'gh pr merge 12 --merge --subject "feat: x" --body "texto --squas
 caso 0 develop 'gh pr merge 12 --merge -R dono/repo'
 caso 0 develop 'gh pr merge 12 --merge --match-head-commit abc123'
 caso 0 develop 'gh pr merge 1 --merge; gh pr merge 2 --merge'
+
+echo "▶ protect-merge: redirecionamentos do shell não são argumentos do gh (ERR-002)"
+caso 0 develop 'gh pr merge 12 --merge 2>&1'
+caso 0 develop 'gh pr merge 12 --merge > /tmp/log 2>&1'
+caso 0 develop 'gh pr merge --merge 2>&1'
+caso 0 develop 'gh pr merge 12 --merge --body "a > b"'
+caso 2 develop 'gh pr merge 12 --squash 2>&1'
+caso 2 main    'gh pr merge 12 --merge 2>&1'
+caso 2 develop 'gh pr merge 12 --merge --body ">" --squash'
+# Redirecionamento colado ao fim de uma opção: o shell entrega a opção ao gh (achado 🔴 da revisão)
+caso 2 develop 'gh pr merge 7 --merge --squash>x'
+caso 2 develop 'gh pr merge 7 --merge --admin>x'
+caso 2 develop 'gh pr merge 7 --merge --auto>/dev/null'
+caso 2 develop 'gh pr merge 7 --merge --rebase<x'
+caso 2 develop 'gh pr merge 7 --merge --squash&>x'
+# >| (noclobber): o | não pode separar o comando antes de o redirecionamento ser tirado (achado 🔴)
+caso 2 develop 'gh pr merge 7 --merge >| x --squash'
+caso 2 develop 'gh pr merge 7 --merge >|x --squash'
+caso 2 develop 'gh pr merge 7 --merge 2>|x --admin'
+# Outros operadores (já passavam: guardas contra regressão)
+caso 2 develop 'gh pr merge 7 --merge &>x --squash'
+caso 2 develop 'gh pr merge 7 --merge >& x --squash'
+caso 2 develop 'gh pr merge 7 --merge <<< x --squash'
+# O que NÃO é argumento do gh continua liberado
+caso 0 develop 'gh pr merge 7 --merge>x'
+caso 0 develop 'gh pr merge 12>x --merge'
+caso 0 develop 'gh pr merge 7 --merge > --squash'
+# Opção ENTRE ASPAS com redirecionamento colado: o shell entrega a opção ao gh (achado 🔴 da 2ª revisão)
+caso 2 develop "gh pr merge 1 --merge '--squash'>x"
+caso 2 develop 'gh pr merge 1 --merge "--squash">x'
+caso 2 develop "gh pr merge 1 --merge '--admin'>x"
+caso 2 develop 'gh pr merge 1 --merge "--admin" 2>&1'
+caso 0 develop 'gh pr merge 1 --merge "--admin"2>&1'   # o shell entrega a palavra "--admin2", que não é opção
+caso 2 develop 'gh pr merge 1 --merge "--auto"<x'
+# Texto citado com > dentro continua sendo texto (guardas), e número citado seguido de redirecionamento é o alvo
+caso 0 develop 'gh pr merge 1 --merge --body "a>b"'
+caso 0 develop "gh pr merge 1 --merge --subject 'x>y'"
+caso 2 develop 'gh pr merge 1 --merge --body "a>b" --squash'
+caso 0 develop 'gh pr merge 1 --merge "12">x'
+
+echo "▶ protect-merge: expansões do shell são bloqueadas em 'gh pr merge' (ERR-003, opção B)"
+# O shell expandiria isto para --squash; o hook não enxerga o resultado, então bloqueia o $, a crase e o \
+# shellcheck disable=SC2016  # $ e crase literais de propósito: é o que o hook precisa bloquear
+caso 2 develop 'gh pr merge 1 --merge $(echo --squash)'
+# shellcheck disable=SC2016  # idem
+caso 2 develop 'gh pr merge 1 --merge `echo --squash`'
+caso 2 develop 'gh pr merge 1 --merge \--squash'
+# shellcheck disable=SC2016  # idem
+caso 2 develop 'gh pr merge 1 --merge $IFS--squash'
+# shellcheck disable=SC2016  # idem
+caso 2 develop 'gh pr merge 1 --merge ${X}--squash'
+# shellcheck disable=SC2016  # idem
+caso 2 develop 'gh pr merge 1 --merge --body "$(echo x)"'
+# shellcheck disable=SC2016  # idem
+caso 2 develop 'gh pr merge $PR --merge'
+# Expansão de chaves: o bash entrega --squash sem $, crase nem \ (achado 🟡 da 4ª revisão)
+caso 2 develop 'gh pr merge 12 --merge {--squash,x}'
+caso 2 develop 'gh pr merge 12 --merge --{squash,x}'
+# Falso bloqueio aceito, como o do $
+caso 2 develop 'gh pr merge 12 --merge --body "fix {x}"'
+# Falso bloqueio aceito: não dá para saber se o $ é literal (aspas simples) sem reimplementar o shell
+caso 2 develop "gh pr merge 1 --merge --body 'custa \$5'"
+# Guardas: só o segmento do 'gh pr merge' é afetado
+# shellcheck disable=SC2016  # $ literal de propósito: o hook é quem decide
+caso 0 develop 'echo $HOME && gh pr merge 12 --merge'
+# shellcheck disable=SC2016  # idem
+caso 0 develop 'gh pr view $N'
+caso 0 develop 'gh pr merge 12 --merge'
+
+echo "▶ protect-merge: flag global, GH_REPO e alias escondem o merge (ERR-003, 5ª revisão)"
+# "gh -R x pr merge" não começa com "gh pr merge": passa pelo hook e pelo "ask" do settings.json
+caso 2 develop 'gh -R o/r pr merge 1 --squash'
+caso 2 develop 'gh --repo o/r pr merge 1 --admin'
+caso 2 develop 'gh -R o/r pr merge 1 --merge'
+# GH_REPO/GH_HOST mudam o repositório do merge, mas o hook consulta o PR no repositório da sessão
+caso 2 develop 'GH_REPO=o/r gh pr merge 1 --merge'
+caso 2 develop 'GH_HOST=x gh pr merge 1 --merge'
+# alias: "gh pm 1" vira "gh pr merge --squash 1" sem o hook ver
+caso 2 develop 'gh alias set pm "pr merge --squash"'
+caso 2 develop 'gh alias import aliases.yml'
+# Guardas: o que não é merge continua liberado
+caso 0 develop 'gh -R o/r pr view 1'
+caso 0 develop 'gh --version'
+caso 0 develop 'gh alias list'
+caso 0 develop 'FOO=1 gh pr merge 12 --merge'
+# 6ª revisão: a flag entre "pr" e "merge" escapava da regra que só olhava logo depois do "gh"
+caso 2 develop 'gh pr -R x merge 12 --squash'
+caso 2 develop 'gh pr --repo x merge 12 --admin'
+caso 2 develop 'gh pr -R x merge 12 --merge'
+# Falso bloqueio aceito: "merge" num comando gh fora da forma "gh pr merge"
+caso 2 develop 'gh pr view merge'
+# Guardas
+caso 0 develop 'gh pr -R x view 12'
+caso 0 develop 'gh pr merge 12 --merge -R o/r'
 
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'

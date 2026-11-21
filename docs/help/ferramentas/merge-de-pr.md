@@ -1,7 +1,7 @@
 # NOME
 merge-de-pr — pedir ao Claude o merge de um PR na develop e entender o que o hook bloqueia
 
-Última verificação: 2026-10-28 · Testado com: gh 2.103.2, bash 5, jq
+Última verificação: 2026-11-20 · Testado com: gh 2.103.2, bash 5, jq
 
 ## PARA QUE SERVE
 Define quando o Claude pode fazer merge de PR (ADR 0003). Regra: só na
@@ -16,7 +16,29 @@ Três travas sustentam a regra:
    - PR cujo destino não seja `develop` (consulta com `gh pr view --json baseRefName`;
      se a consulta falhar, bloqueia);
    - qualquer comando sem `--merge`, e `--squash`, `--rebase`, `--admin`, `--auto`;
-   - merge por `gh api` (`.../pulls/N/merge`, `mergePullRequest`, `enablePullRequestAutoMerge`).
+   - merge por `gh api` (`.../pulls/N/merge`, `mergePullRequest`, `enablePullRequestAutoMerge`);
+   - `$`, crase, `\` ou `{` num `gh pr merge` (o shell poderia expandir isso para `--squash`); para um
+     texto com esses caracteres, use `--body-file`;
+   - a palavra `merge` num comando `gh` fora da forma `gh pr merge ...` (`gh -R x pr merge` e `gh pr -R x merge`
+     são barrados: escreva `gh pr merge ... -R x`; `gh pr view merge` também é barrado, falso bloqueio aceito),
+     `GH_REPO`/`GH_HOST` antes do `gh` e `gh alias set/import`.
+
+   O hook lê só o texto do comando e só olha segmentos que **começam** com `gh`: `env gh`, `command gh`,
+   `xargs gh`, `sh -c "gh ..."` e subshell não são vistos. Também escapam `|`, `;`, `&&` ou `||` dentro de
+   aspas, apóstrofos em duas citações do mesmo comando, glob, quebra de linha dentro de aspas, `cd` para outra
+   pasta, `GH_REPO` exportado em outro segmento, alias que já exista e config apontada por `GH_CONFIG_DIR` ou
+   `XDG_CONFIG_HOME`, `&` solto e `|&` (`gh pr view 1 & gh api ...`), flag antes de `api` ou `alias`
+   (`gh --paginate=true api ...`) e `gh api` com caminho ou query montados por expansão, `--input` ou `@arquivo`
+   (ERR-003, limitação aceita; a correção definitiva é a opção A, em PR próprio).
+
+   **O que o `ask` (trava 2) cobre e não cobre** (esta é a única fonte; os outros documentos apontam para cá).
+   Ele separa comandos compostos (`&&`, `||`, `;`, `|`, `|&`, `&`, quebra de linha), vê subshell e `$(...)` e
+   remove os wrappers `command`, `timeout`, `time`, `nice`, `nohup`, `stdbuf` e `xargs` sem flags; por isso
+   **cobre** `cd x && gh pr merge`, `(gh pr merge ...)` e `command gh pr merge`. **Não cobre** `sh -c "gh pr
+   merge ..."`, `xargs` com flags, `gh -R x pr merge` (o hook bloqueia) nem `gh api` e `gh alias`. `env` não está
+   na lista de wrappers removidos: trate `env gh ...` como não coberto. Nos casos não cobertos, a única barreira é
+   você ler o comando antes de aprovar. Fonte: https://code.claude.com/docs/en/permissions (consultada em
+   2026-11-20); o comportamento depende da versão do Claude Code.
 
 ## QUANDO FAZER
 Sempre que quiser que o Claude integre um PR na `develop`. Você precisa
@@ -27,7 +49,7 @@ pedir; ele não faz sozinho.
 - O PR mira a `develop`, o CI está verde e a `/revisar` não tem 🔴/🟡.
 - Recomendado: branch protection da `main` ativa no GitHub (PR obrigatório,
   CI exigido). É ela a garantia real; o hook analisa texto e não pega tudo
-  (por exemplo, comando montado por variável ou `gh api -F query=@arquivo`).
+  (a lista do que ele não vê está acima).
 
 ## PASSO A PASSO
 1. Confira o PR e o CI.
