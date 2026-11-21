@@ -13,6 +13,51 @@ _divisor_fechar() {
   atual=""
 }
 
+# Lê o delimitador de um heredoc ("<<EOF", "<<-EOF", "<<'EOF'", "<<\EOF") a partir de cmd[i] e o guarda em
+# hd_delim, com hd_quoted (1 se o delimitador veio entre aspas ou com barra: o corpo é literal) e hd_tab (1 se
+# "<<-": o terminador pode vir com tabs na frente). Usa cmd, i, tam e os hd_* de quem chamou.
+_divisor_registrar_heredoc() {
+  local j=$((i + 2)) tab=0 quoted=0 delim="" ch q
+  if [[ "${cmd:j:1}" == '-' ]]; then tab=1; j=$((j + 1)); fi
+  while [[ "${cmd:j:1}" == ' ' || "${cmd:j:1}" == $'\t' ]]; do j=$((j + 1)); done
+  ch="${cmd:j:1}"
+  if [[ "$ch" == "'" || "$ch" == '"' ]]; then
+    quoted=1; q="$ch"; j=$((j + 1))
+    while ((j < tam)) && [[ "${cmd:j:1}" != "$q" ]]; do delim+="${cmd:j:1}"; j=$((j + 1)); done
+  else
+    while ((j < tam)); do
+      ch="${cmd:j:1}"
+      case "$ch" in ' ' | $'\t' | $'\n' | ';' | '&' | '|' | '<' | '>' | '(' | ')') break ;; esac
+      if [[ "$ch" == $'\\' ]]; then quoted=1; j=$((j + 1)); ch="${cmd:j:1}"; fi   # "<<\EOF": corpo literal
+      delim+="$ch"; j=$((j + 1))
+    done
+  fi
+  hd_delim+=("$delim"); hd_quoted+=("$quoted"); hd_tab+=("$tab")
+}
+
+# Pula o corpo dos heredocs da linha que acabou: do início da próxima linha até a linha do terminador, e deixa
+# i no fim dessa linha. O corpo é texto, não comando, e por isso não vira segmento. Exceção: com o delimitador
+# SEM aspas o shell expande $( e crase no corpo; cada linha assim vira um segmento, para os hooks a verem.
+# Sem terminador, o corpo vai até o fim do texto. Usa cmd, i, tam, atual e os hd_* de quem chamou.
+_divisor_ler_corpos() {
+  local h pos resto linha fim cmp achou
+  for ((h = 0; h < ${#hd_delim[@]}; h++)); do
+    pos=$((i + 1)); achou=0
+    while ((pos <= tam)); do
+      resto="${cmd:pos}"; linha="${resto%%$'\n'*}"; fim=$((pos + ${#linha}))
+      cmp="$linha"
+      if ((hd_tab[h])); then cmp="${linha#"${linha%%[!$'\t']*}"}"; fi   # "<<-": tira os tabs do começo
+      if [[ "$cmp" == "${hd_delim[h]}" ]]; then achou=1; i=$fim; break; fi
+      if ((hd_quoted[h] == 0)) && [[ "$linha" == *$'$('* || "$linha" == *'`'* ]]; then
+        atual="$linha"; _divisor_fechar
+      fi
+      pos=$((fim + 1))
+    done
+    if ((achou == 0)); then i=$tam; break; fi
+  done
+  hd_delim=(); hd_quoted=(); hd_tab=()
+}
+
 # Divide um comando do shell em segmentos (um por comando) e deixa o resultado em SEGMENTOS.
 # Lê o texto uma letra por vez. Separadores: & && || ; | |& e quebra de linha, fora de aspas.
 # A barra \ protege a letra seguinte (fora de aspas e dentro de aspas duplas, não dentro de aspas simples):
@@ -22,6 +67,7 @@ dividir_comando() {   # $1 = o texto do comando
   # (14 KB levava 5,5 s). Só os separadores importam e todos são ASCII; os bytes de acentos passam inteiros.
   local LC_ALL=C
   local cmd="$1" tam="${#1}" i c ant prox atual="" aspa=""
+  local -a hd_delim=() hd_quoted=() hd_tab=()   # heredocs da linha, à espera do corpo (ver _divisor_ler_corpos)
   SEGMENTOS=()
   for ((i = 0; i < tam; i++)); do
     c="${cmd:i:1}"
@@ -41,7 +87,15 @@ dividir_comando() {   # $1 = o texto do comando
     case "$c" in
       $'\\') atual+="$c$prox"; i=$((i + 1)) ;;   # fora de aspas, a barra protege a letra seguinte
       '"' | "'") aspa="$c"; atual+="$c" ;;   # abriu aspas
-      ';' | $'\n') _divisor_fechar ;;
+      ';') _divisor_fechar ;;
+      $'\n')
+        _divisor_fechar
+        if ((${#hd_delim[@]} > 0)); then _divisor_ler_corpos; fi   # o corpo do heredoc começa na linha seguinte
+        ;;
+      '<')
+        atual+="$c"
+        # "<<" que não é "<<<" (here-string): heredoc. Guarda o delimitador; o corpo é lido no fim da linha.
+        if [[ "$prox" == '<' && "${cmd:i+2:1}" != '<' && "$ant" != '<' ]]; then _divisor_registrar_heredoc; fi ;;
       '|')
         if [[ "$ant" == '>' ]]; then
           atual+="$c"                                      # ">|" é redirecionamento, não pipe
@@ -81,7 +135,7 @@ _tokenizar_fechar() {
 # fechar) e em MOTIVO (o porquê, ou vazio). As palavras se separam em espaço, tab e quebra de linha.
 tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
-  local seg="$1" tam="${#1}" i c prox atual="" mascara="" tem=0 citado=0 aspa=""
+  local seg="$1" tam="${#1}" i c prox atual="" mascara="" tem=0 citado=0 aspa="" expande=0
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); ININTERPRETAVEL=0; MOTIVO=""
   for ((i = 0; i < tam; i++)); do
     c="${seg:i:1}"
@@ -99,6 +153,7 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
         esac
       else
         atual+="$c"; mascara+="1"
+        if [[ "$c" == '`' || ( "$c" == '$' && "$prox" == '(' ) ]]; then expande=1; fi   # o shell executa isto
       fi
     else                                 # fora de aspas
       case "$c" in
@@ -112,6 +167,8 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
             i=$((i + 1))
           fi ;;
         ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
+        '`') atual+="$c"; mascara+="0"; tem=1; expande=1 ;;           # crase: o shell executa o que está dentro
+        '$') atual+="$c"; mascara+="0"; tem=1; [[ "$prox" == '(' ]] && expande=1 ;;   # "$(": idem
         *) atual+="$c"; mascara+="0"; tem=1 ;;
       esac
     fi
@@ -120,6 +177,9 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   if [[ -n "$aspa" ]]; then
     ININTERPRETAVEL=1
     MOTIVO="aspas sem fechar (${aspa})"
+  elif ((expande)); then                 # em aspas simples ou com barra não conta: o shell não executa
+    ININTERPRETAVEL=1
+    MOTIVO="expansão \$( ou crase: o que roda só se sabe depois do shell"
   fi
 }
 
@@ -319,8 +379,24 @@ analisar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
 # A regra da falha fechada (ADR 0005): quando o segmento não se deixa interpretar, o hook decide se bloqueia.
 # Devolve 0 = bloquear, 1 = liberar. O hook define PROTEGIDOS, a lista de ações que protege (por exemplo
 # ("git push" "gh pr merge" "gh api" "gh alias")). Usa o que analisar_segmento deixou.
-# T7: esqueleto; devolve "liberar" sempre. O corpo vem na fase verde.
+# Só age quando o segmento é ininterpretável (aspa aberta, $( ou crase) ou tem um wrapper que não sabemos abrir
+# (xargs com flags, env -S). Então: se o programa e a ação se acham, bloqueia só se a ação é protegida
+# ("git commit -m \"$(...)\"" passa; "git push \"$(...)\"" não). Se o programa não se acha (a primeira palavra é uma
+# expansão, ou o wrapper não abre), bloqueia quando o texto cru cita gh ou git.
 falha_fechada() {
+  local acao p primeira re='(^|[^[:alnum:]_])(gh|git)([^[:alnum:]_]|$)'
+  [[ "$ININTERPRETAVEL" == 1 || -n "$WRAPPER_NAO_SUPORTADO" ]] || return 1
+  if [[ -n "$PROG" ]]; then
+    acao="$PROG $SUB"; [[ -n "$SUB2" ]] && acao+=" $SUB2"
+    for p in "${PROTEGIDOS[@]}"; do
+      [[ "$acao" == "$p" || "$acao" == "$p "* ]] && return 0
+    done
+    return 1
+  fi
+  primeira="${SEGMENTO_CRU%%[[:space:]]*}"
+  if [[ -n "$WRAPPER_NAO_SUPORTADO" || "$primeira" == *$'$('* || "$primeira" == *'`'* ]]; then
+    [[ "$SEGMENTO_CRU" =~ $re ]] && return 0
+  fi
   return 1
 }
 
