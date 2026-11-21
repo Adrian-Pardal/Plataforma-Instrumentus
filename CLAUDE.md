@@ -38,7 +38,7 @@ médias por construto.
 ## 6. Qualidade
 - Diffs pequenos.
 - Decisão de arquitetura vira ADR. ADR aceito não se edita (crie outro que o substitua).
-- Erro relevante vira ERR-NNN em docs/erros/ (use /registrar-erro).
+- Erro relevante vira ERR-NNN em docs/erros/ (use /registrar-erro). Antes de mexer em autenticação, dados dos respondentes, migrations ou deploy, leia os erros dessas áreas em docs/erros/.
 - Toda ferramenta, credencial ou tarefa manual nova ganha página em docs/help/ no mesmo commit; quando um procedimento mudar, atualize a página. Exceção: skills são documentadas em docs/skills.md, não em docs/help.
 - Nunca edite .env nem commite segredos.
 - Merge de PR: só na develop, só quando eu pedir explicitamente no chat, com CI verde e /revisar sem 🔴/🟡; sempre `gh pr merge --merge` (nunca --squash, --rebase, --admin ou --auto; hook protect-merge). Merge na main é só meu.

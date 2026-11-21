@@ -25,6 +25,8 @@ novo não basta: ele exige uma defesa automática (regra, hook ou CI).
 5. Preencha tudo com evidência da sessão (saídas, commits). Campos do
    cabeçalho: categoria (bug, erro-ia, ambiente, producao), severidade
    (baixa, media, alta, critica), detectado-em (local, ci, revisao, producao).
+   Em `issue`, ponha o número da issue aberta pelos modelos de `.github/ISSUE_TEMPLATE/` ou pelo CI
+   (etiqueta `incidente`); sem issue, deixe vazio.
    Status: `corrigido` quando correção e teste existem; `aberto` se a causa
    raiz é conhecida mas a correção está pendente; `aceito` só por decisão do
    dono. Não use `investigando` para registrar: investigue antes. Causa raiz
