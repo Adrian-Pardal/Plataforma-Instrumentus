@@ -9,10 +9,12 @@
 # olhar as aspas e pareia aspas de tipos diferentes como o regex achar ("it's" --squash "x's" esconde o
 # --squash); uma quebra de linha dentro de aspas e um glob (--s*) também escapam. Tudo isso é aceito como
 # limitação (ERR-003, opção C). O destino do PR é consultado na pasta da sessão: "cd outra-pasta && gh pr merge"
-# e um GH_REPO exportado em outro segmento também não são vistos. Bloqueados (opção B): $, crase, \ e { em
-# 'gh pr merge' (o shell os expandiria sem o hook ver); flag global antes do subcomando; GH_REPO/GH_HOST no
-# prefixo; "gh alias set/import". O "ask" do settings.json só casa comandos que começam com "gh pr merge":
-# não cobre env gh, sh -c, xargs gh nem "gh -R x pr merge".
+# e um GH_REPO exportado em outro segmento também não são vistos, nem um alias que já exista ou uma config
+# apontada por GH_CONFIG_DIR/XDG_CONFIG_HOME. Bloqueados (opção B): $, crase, \ e { em 'gh pr merge' (o shell os
+# expandiria sem o hook ver); "merge" num comando gh fora da forma "gh pr merge" (flag entre os termos; falso
+# bloqueio aceito: "gh pr view merge"); GH_REPO/GH_HOST no prefixo; "gh alias set/import". O "ask" do
+# settings.json só casa comandos que começam com "gh pr merge": não cobre env gh, command gh, xargs gh, sh -c,
+# subshell nem "gh -R x pr merge".
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
 bloquear() { echo "🚫 protect-merge: $1" >&2; exit 2; }
@@ -150,10 +152,11 @@ while IFS= read -r SEG; do
   while [[ $i -lt ${#TOK[@]} && "${TOK[$i]}" == *=* ]]; do i=$((i+1)); done   # pula "VAR=valor gh ..."
   [[ "${TOK[$i]:-}" == "gh" || "${TOK[$i]:-}" == */gh ]] || continue
 
-  # ERR-003: flag global antes do subcomando ("gh -R o/r pr merge ...") esconde o "pr merge" deste hook e do "ask"
-  if [[ "${TOK[$((i+1))]:-}" == -* ]]; then
+  # ERR-003: forma canônica. A palavra "merge" num comando gh só é aceita como "gh pr merge" (os dois tokens
+  # logo depois do gh). Uma flag no meio ("gh -R x pr merge", "gh pr -R x merge") esconderia o merge deste hook e do "ask".
+  if [[ "${TOK[$((i+1))]:-}" != pr || "${TOK[$((i+2))]:-}" != merge ]]; then
     for T in "${TOK[@]:$((i+1))}"; do
-      [[ "$T" == merge ]] && bloquear "flag antes do subcomando ('gh -R x pr merge') não é permitida: escreva 'gh pr merge ... -R x'."
+      [[ "$T" == merge ]] && bloquear "'merge' num comando gh só é aceito como 'gh pr merge ...' (opções como -R vão depois): qualquer outra forma é bloqueada por segurança."
     done
   fi
 
