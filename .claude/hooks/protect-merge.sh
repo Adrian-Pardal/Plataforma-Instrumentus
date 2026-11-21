@@ -7,8 +7,9 @@
 # Limitação: é análise estática do TEXTO do comando. Só olha segmentos que COMEÇAM com "gh" (ou "VAR=x gh"):
 # "env gh", "command gh", "xargs gh", "sh -c" e subshell passam. Corta o comando em |, ;, && e || antes de
 # olhar as aspas e pareia aspas de tipos diferentes como o regex achar ("it's" --squash "x's" esconde o
-# --squash); uma quebra de linha dentro de aspas e um glob (--s*) também escapam. Tudo isso é aceito como
-# limitação (ERR-003, opção C). O destino do PR é consultado na pasta da sessão: "cd outra-pasta && gh pr merge"
+# --squash); uma quebra de linha dentro de aspas e um glob (--s*) também escapam, e também um "&" solto
+# ("gh pr view 1 & gh api ...") e uma flag antes de "api" ou "alias" ("gh --paginate=true api ..."). Tudo isso é
+# aceito como limitação (ERR-003, opção C); a correção de verdade é a opção A, um divisor de comandos próprio, com ADR. O destino do PR é consultado na pasta da sessão: "cd outra-pasta && gh pr merge"
 # e um GH_REPO exportado em outro segmento também não são vistos, nem um alias que já exista ou uma config
 # apontada por GH_CONFIG_DIR/XDG_CONFIG_HOME. Bloqueados (opção B): $, crase, \ e { em 'gh pr merge' (o shell os
 # expandiria sem o hook ver); "merge" num comando gh fora da forma "gh pr merge" (flag entre os termos; falso

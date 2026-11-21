@@ -27,7 +27,8 @@ Três travas sustentam a regra:
    `xargs gh`, `sh -c "gh ..."` e subshell não são vistos. Também escapam `|`, `;`, `&&` ou `||` dentro de
    aspas, apóstrofos em duas citações do mesmo comando, glob, quebra de linha dentro de aspas, `cd` para outra
    pasta, `GH_REPO` exportado em outro segmento, alias que já exista e config apontada por `GH_CONFIG_DIR` ou
-   `XDG_CONFIG_HOME` (ERR-003, limitação aceita). O `ask` (trava 2) só casa comandos
+   `XDG_CONFIG_HOME`, `&` solto (`gh pr view 1 & gh api ...`) e flag antes de `api` ou `alias`
+   (`gh --paginate=true api ...`) (ERR-003, limitação aceita; a correção definitiva é a opção A, em PR próprio). O `ask` (trava 2) só casa comandos
    que começam com `gh pr merge`: não cobre esses casos. Neles, a única barreira é você ler o comando antes
    de aprovar.
 
