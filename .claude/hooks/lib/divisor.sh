@@ -201,3 +201,11 @@ separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que token
   done
   if [[ -n "$alvo" ]]; then ININTERPRETAVEL=1; MOTIVO="redirecionamento sem alvo"; fi
 }
+
+# Acha, em TOK, o programa (gh ou git), as variáveis "VAR=valor" que vêm antes dele, as flags globais e o
+# subcomando. Deixa em PROG (gh, git ou vazio), ENV_PREFIXO, FLAGS_GLOBAIS (cada flag e o valor dela, na ordem),
+# DIR_GIT (o valor de "-C"), SUB, SUB2 (o 2º nível de "gh pr" e "gh alias": merge, view, set...) e ARGS (o resto).
+# T5: esqueleto vazio; o corpo vem na fase verde.
+achar_subcomando() {   # usa TOK (depois de tokenizar_segmento e separar_redirecionamentos)
+  PROG=""; SUB=""; SUB2=""; ARGS=(); FLAGS_GLOBAIS=(); ENV_PREFIXO=(); DIR_GIT=""
+}

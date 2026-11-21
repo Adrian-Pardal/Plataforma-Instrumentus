@@ -218,5 +218,59 @@ caso_redir "opção colada ao &>"          'gh pr merge 7 --merge --squash&>x'  
 echo "▶ redirecionamentos: erro de sintaxe"
 caso_redir "operador sem alvo"           'echo x >'              '[echo][x]' ''           ''  1
 
+caso_sub() {   # caso_sub <descrição> <segmento> <esperado: "PROG=.. SUB=.. SUB2=.. ARGS=.. FLAGS=.. DIR=.. ENV=..">
+  local descricao="$1" seg="$2" esperado="$3" a="" f="" e="" x obtido
+  tokenizar_segmento "$seg"
+  separar_redirecionamentos
+  achar_subcomando
+  for x in "${ARGS[@]}"; do a+="[$x]"; done
+  for x in "${FLAGS_GLOBAIS[@]}"; do f+="[$x]"; done
+  for x in "${ENV_PREFIXO[@]}"; do e+="[$x]"; done
+  obtido="PROG=$PROG SUB=$SUB SUB2=$SUB2 ARGS=$a FLAGS=$f DIR=$DIR_GIT ENV=$e"
+  if [[ "$obtido" == "$esperado" ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado '$esperado', veio '$obtido'" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ subcomando: git"
+caso_sub "git push"                          'git push origin main'  'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS= DIR= ENV='
+caso_sub "-C leva um valor"                  'git -C /tmp push'      'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/tmp] DIR=/tmp ENV='
+caso_sub "-c leva um valor"                  'git -c k=v push origin' 'PROG=git SUB=push SUB2= ARGS=[origin] FLAGS=[-c][k=v] DIR= ENV='
+caso_sub "--config-env leva um valor (furo do protect-push)" 'git --config-env a=B push origin main' \
+  'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS=[--config-env][a=B] DIR= ENV='
+caso_sub "--attr-source leva um valor (furo do protect-push)" 'git --attr-source HEAD push origin main' \
+  'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS=[--attr-source][HEAD] DIR= ENV='
+caso_sub "--git-dir=valor não consome o próximo" 'git --git-dir=/x push' 'PROG=git SUB=push SUB2= ARGS= FLAGS=[--git-dir=/x] DIR= ENV='
+caso_sub "--git-dir valor consome o próximo" 'git --git-dir /x push'  'PROG=git SUB=push SUB2= ARGS= FLAGS=[--git-dir][/x] DIR= ENV='
+caso_sub "flag sem valor é booleana"         'git --no-pager log'    'PROG=git SUB=log SUB2= ARGS= FLAGS=[--no-pager] DIR= ENV='
+caso_sub "git sozinho"                       'git'                   'PROG=git SUB= SUB2= ARGS= FLAGS= DIR= ENV='
+caso_sub "flag com valor faltando"           'git -c'                'PROG=git SUB= SUB2= ARGS= FLAGS=[-c] DIR= ENV='
+caso_sub "dois -C: vale o último"            'git -C a -C b push'    'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][a][-C][b] DIR=b ENV='
+caso_sub "-C com valor entre aspas"          'git -C "/tmp/a b" push' 'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/tmp/a b] DIR=/tmp/a b ENV='
+caso_sub "flag entre aspas continua flag"    'git "-C" /x push'      'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/x] DIR=/x ENV='
+caso_sub "redirecionamento não é argumento"  'git push origin main > log' 'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS= DIR= ENV='
+
+echo "▶ subcomando: gh"
+caso_sub "gh pr merge"                       'gh pr merge 1 --merge' 'PROG=gh SUB=pr SUB2=merge ARGS=[1][--merge] FLAGS= DIR= ENV='
+caso_sub "flag antes do pr (-R x)"           'gh -R x pr merge 1 --squash' 'PROG=gh SUB=pr SUB2=merge ARGS=[1][--squash] FLAGS=[-R][x] DIR= ENV='
+caso_sub "flag entre pr e merge (-R x)"      'gh pr -R x merge 12 --squash' 'PROG=gh SUB=pr SUB2=merge ARGS=[12][--squash] FLAGS=[-R][x] DIR= ENV='
+caso_sub "flag antes de api"                 'gh --paginate=true api -X PUT repos/o/r/pulls/12/merge' \
+  'PROG=gh SUB=api SUB2= ARGS=[-X][PUT][repos/o/r/pulls/12/merge] FLAGS=[--paginate=true] DIR= ENV='
+caso_sub "--hostname=valor antes de api"     'gh --hostname=github.com api repos/o/r' 'PROG=gh SUB=api SUB2= ARGS=[repos/o/r] FLAGS=[--hostname=github.com] DIR= ENV='
+caso_sub "flag antes de alias"               'gh --clobber=true alias set m x' 'PROG=gh SUB=alias SUB2=set ARGS=[m][x] FLAGS=[--clobber=true] DIR= ENV='
+caso_sub "subcomando entre aspas"            'gh pr "merge" 12'      'PROG=gh SUB=pr SUB2=merge ARGS=[12] FLAGS= DIR= ENV='
+caso_sub "merge como argumento, não como ação" 'gh pr view merge'   'PROG=gh SUB=pr SUB2=view ARGS=[merge] FLAGS= DIR= ENV='
+caso_sub "flags depois da ação são argumentos" 'gh pr merge --merge 1 -R o/r' 'PROG=gh SUB=pr SUB2=merge ARGS=[--merge][1][-R][o/r] FLAGS= DIR= ENV='
+
+echo "▶ subcomando: variáveis na frente e programa por caminho"
+caso_sub "VAR=valor antes do gh"             'FOO=1 gh pr merge 12 --merge' 'PROG=gh SUB=pr SUB2=merge ARGS=[12][--merge] FLAGS= DIR= ENV=[FOO=1]'
+caso_sub "GH_REPO antes do gh"               'GH_REPO=o/r gh pr merge 1 --merge' 'PROG=gh SUB=pr SUB2=merge ARGS=[1][--merge] FLAGS= DIR= ENV=[GH_REPO=o/r]'
+caso_sub "programa por caminho"              '/usr/bin/gh pr view 1' 'PROG=gh SUB=pr SUB2=view ARGS=[1] FLAGS= DIR= ENV='
+caso_sub "outro programa"                    'ls -la'                'PROG= SUB= SUB2= ARGS= FLAGS= DIR= ENV='
+caso_sub "git como argumento de outro programa" 'echo git push'      'PROG= SUB= SUB2= ARGS= FLAGS= DIR= ENV='
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
