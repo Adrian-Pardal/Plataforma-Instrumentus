@@ -98,7 +98,7 @@ PR 1a (divisor):
   `gh --paginate=true api` · Cobre: D2 · Teste: divisor.test.sh › subcomando (90 min)
 - [x] T6 [infra] — `desembrulhar`: `env`, `command`, `xargs` sem flags, `sudo`, `nohup`, `time` e subshell ·
   Cobre: D3 · Teste: divisor.test.sh › wrappers (60 min)
-- [ ] T7 [infra] — falha fechada com a regra por subcomando, heredoc (`<<`, `<<-`) e `$(`/crase só em aspas
+- [x] T7 [infra] — falha fechada com a regra por subcomando, heredoc (`<<`, `<<-`) e `$(`/crase só em aspas
   duplas ou sem aspas · Cobre: D4 · Teste: divisor.test.sh › falha fechada (60 min)
 
 PR 1b (`protect-merge`):
