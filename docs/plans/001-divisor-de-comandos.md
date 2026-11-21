@@ -109,7 +109,7 @@ PR 1a (divisor):
   Cobre: D3 · Teste: divisor.test.sh › wrappers (60 min)
 - [x] T7 [infra] — falha fechada com a regra por subcomando, heredoc (`<<`, `<<-`) e `$(`/crase só em aspas
   duplas ou sem aspas · Cobre: D4 · Teste: divisor.test.sh › falha fechada (60 min)
-- [ ] T7b [infra] — lexer: `#` abre comentário (fora de aspas, no começo de palavra); `$'...'` (ANSI-C, a barra protege a letra
+- [x] T7b [infra] — lexer: `#` abre comentário (fora de aspas, no começo de palavra); `$'...'` (ANSI-C, a barra protege a letra
   seguinte); `<(` e `>(` marcam ininterpretável como `$(`; heredoc com delimitador de aspas parciais (`<<E"O"F`) e `<<` dentro
   de `$((...))` ou de comentário não é heredoc; testes de `<<"EOF"` e `<<\EOF` · Cobre: D1, D4 ·
   Teste: divisor.test.sh › lexer (90 min)
