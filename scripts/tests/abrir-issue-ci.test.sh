@@ -50,7 +50,7 @@ caso "criar falhou: propaga o erro (1)"      1 1 FAKE_CRIAR=erro
 echo "▶ abrir-issue-ci: o que vai na issue"
 : > "$FALSO/chamadas.log"
 RUN_URL="$URL" SHA=abc123 PATH="$FALSO:$PATH" "$SCRIPT" >/dev/null 2>&1
-criar=$(grep '^issue create' "$FALSO/chamadas.log")
+criar=$(awk '/^issue create/ {p=1} p' "$FALSO/chamadas.log")
 if grep -q -- '--label incidente' <<<"$criar" && grep -q "$URL" <<<"$criar" \
   && grep -q abc123 <<<"$criar"; then
   echo "  ok    etiqueta incidente, link do log e commit"
