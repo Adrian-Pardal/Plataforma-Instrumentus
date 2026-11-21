@@ -3,7 +3,7 @@
 - **Spec:** nenhuma. A fonte dos requisitos é o [ADR 0005](../adr/0005-divisor-de-comandos-para-os-hooks.md)
   (Decisão, itens 1 a 4) e os achados do [ERR-003](../erros/ERR-003-protect-merge-analise-de-texto.md).
   Exceção autorizada pelo dono em 2026-11-20 (a skill `planejar` exige spec Aprovada).
-- **Status:** Rascunho (voltou de Aprovado em 2026-11-21 para incorporar a revisão do PR 1a, tasks T7b a T7f; aguarda novo "sim")
+- **Status:** Aprovado (reaprovado pelo dono em 2026-11-21, depois de incorporar a revisão do PR 1a: tasks T7b a T7f)
 - **Data:** 2026-11-20
 
 ## Visão técnica
