@@ -531,5 +531,35 @@ echo "▶ falha fechada (T7d): PROTEGIDOS vazia ou ausente bloqueia o que é ini
 caso_falha_fechada_sem "PROTEGIDOS vazia"                $'git commit -m "$(date)"'                 vazia
 caso_falha_fechada_sem "PROTEGIDOS ausente"              $'echo "$(date)"'                          ausente
 
+caso_pipeline() {   # caso_pipeline <descrição> <comando> <segmentos esperados> <limite em ms>
+  local descricao="$1" cmd="$2" esp_seg="$3" limite_ms="$4" ini fim ms s
+  # shellcheck disable=SC2034  # PROTEGIDOS é lida por falha_fechada, em divisor.sh
+  PROTEGIDOS=("git push" "gh pr merge" "gh api" "gh alias")
+  ini=${EPOCHREALTIME/./}
+  dividir_comando "$cmd"
+  for s in "${SEGMENTOS[@]}"; do analisar_segmento "$s"; falha_fechada; done
+  fim=${EPOCHREALTIME/./}
+  ms=$(((fim - ini) / 1000))
+  if [[ ${#SEGMENTOS[@]} -eq $esp_seg && $ms -le $limite_ms ]]; then
+    echo "  ok    $descricao (${ms} ms)"
+  else
+    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmento(s) (esperado $esp_seg) em ${ms} ms (limite ${limite_ms} ms)" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+texto_grande() {   # texto_grande <KB>: texto simples com linhas, sem aspas nem separadores
+  local t="" linha="linha de texto da mensagem de commit, com palavras comuns e nada especial"
+  while ((${#t} < $1 * 1000)); do t+="$linha"$'\n'; done
+  printf '%s' "$t"
+}
+
+echo "▶ desempenho (T7e): UM segmento grande pelo pipeline inteiro (dividir + tokenizar + redirecionamentos + falha fechada)"
+GRANDE=$(texto_grande 20)
+caso_pipeline "git commit -m com 20 KB entre aspas"       "git commit -m \"$GRANDE\""                          1 2000
+caso_pipeline "git commit com heredoc de 20 KB entre aspas" $'git commit -m "$(cat <<\'EOF\'\n'"$GRANDE"$'\nEOF\n)"' 1 2000
+caso_pipeline "heredoc de 20 KB fora de aspas"             $'cat <<\'EOF\'\n'"$GRANDE"$'\nEOF'                1 2000
+caso_pipeline "uma palavra de 20 KB"                       "echo ${GRANDE//[[:space:]]/_}"                      1 2000
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
