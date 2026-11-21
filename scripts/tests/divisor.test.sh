@@ -85,5 +85,52 @@ caso_desempenho() {   # caso_desempenho <descrição> <repetições> <limite em 
 echo "▶ divisor: desempenho"
 caso_desempenho "comando de 14 KB (1000 comandos)" 1000 3000
 
+caso_tokens() {   # caso_tokens <descrição> <segmento> <tokens, cada um entre colchetes> <citado: 0/1 por vírgula> [ininterpretável: 0|1]
+  local descricao="$1" seg="$2" esp_tok="$3" esp_cit="$4" esp_int="${5:-0}" tok="" cit="" t motivo_ok=1
+  tokenizar_segmento "$seg"
+  for t in "${TOK[@]}"; do tok+="[$t]"; done
+  cit=$(IFS=,; echo "${TOK_CITADO[*]}")
+  if [[ "$esp_int" == 1 ]]; then [[ -n "$MOTIVO" ]] || motivo_ok=0; else [[ -z "$MOTIVO" ]] || motivo_ok=0; fi
+  if [[ "$tok" == "$esp_tok" && "$cit" == "$esp_cit" && "$ININTERPRETAVEL" == "$esp_int" && $motivo_ok -eq 1 ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado tokens='$esp_tok' citado='$esp_cit' interpretável=$esp_int," \
+      "veio tokens='$tok' citado='$cit' ininterpretável=$ININTERPRETAVEL motivo='$MOTIVO'" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ tokens: palavras"
+caso_tokens "palavras simples"                'ls -la'                   '[ls][-la]'               '0,0'
+caso_tokens "espaços e tabs sobrando"         $'a  \t b'                 '[a][b]'                  '0,0'
+caso_tokens "segmento vazio"                  ''                         ''                        ''
+
+echo "▶ tokens: aspas"
+caso_tokens "aspas duplas juntam"             'echo "a b"'               '[echo][a b]'             '0,1'
+caso_tokens "aspas simples juntam"            "echo 'a b'"               '[echo][a b]'             '0,1'
+caso_tokens "aspas coladas na palavra"        'a"b c"d'                  '[ab cd]'                 '1'
+caso_tokens "aspas vazias são uma palavra"    'echo ""'                  '[echo][]'                '0,1'
+caso_tokens "opção entre aspas continua opção" 'gh pr merge "--squash"'  '[gh][pr][merge][--squash]' '0,0,0,1'
+caso_tokens "operador dentro de aspas"        'cmd --body "a > b"'       '[cmd][--body][a > b]'    '0,0,1'
+caso_tokens "apóstrofo dentro de aspas duplas" "echo \"it's\""           "[echo][it's]"            '0,1'
+caso_tokens "dois apóstrofos (ERR-003)" \
+  "gh pr merge 1 --body \"it's\" --squash --subject \"x's\"" \
+  "[gh][pr][merge][1][--body][it's][--squash][--subject][x's]" '0,0,0,0,0,1,0,0,1'
+
+echo "▶ tokens: barra"
+caso_tokens "barra protege o espaço"          'echo a\ b'                '[echo][a b]'             '0,1'
+caso_tokens "barra protege o >"               'echo a\>b'                '[echo][a>b]'             '0,1'
+caso_tokens "\" dentro de aspas duplas"       'echo "a\"b"'              '[echo][a"b]'             '0,1'
+caso_tokens "\\ dentro de aspas duplas"       'echo "a\\b"'              '[echo][a\b]'             '0,1'
+caso_tokens "barra comum dentro de aspas duplas fica" 'echo "a\b"'       '[echo][a\b]'             '0,1'
+caso_tokens "barra dentro de aspas simples é literal" "echo 'a\\b'"      '[echo][a\b]'             '0,1'
+caso_tokens "continuação de linha some"       $'ls \\\n-la'              '[ls][-la]'               '0,0'
+
+echo "▶ tokens: aspas sem fechar (ininterpretável)"
+caso_tokens "aspas duplas sem fechar"         'echo "abc'                '[echo][abc]'             '0,1' 1
+caso_tokens "aspas simples sem fechar"        "echo 'abc"                '[echo][abc]'             '0,1' 1
+tokenizar_segmento 'echo "abc'
+caso_tokens "o estado não vaza (volta a interpretável)" 'echo ok'        '[echo][ok]'              '0,0'
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"

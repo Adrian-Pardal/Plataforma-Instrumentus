@@ -63,3 +63,11 @@ dividir_comando() {   # $1 = o texto do comando
   done
   _divisor_fechar                        # guarda o último segmento
 }
+
+# Quebra UM segmento em palavras, como o shell as entregaria ao programa (sem aspas nem barras de proteção).
+# Deixa em TOK as palavras, em TOK_CITADO (1 se a palavra teve aspas ou barra), em ININTERPRETAVEL (1 se há
+# aspa sem fechar) e em MOTIVO (o porquê, ou vazio).
+# T3: esqueleto vazio; o corpo vem na fase verde.
+tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
+  TOK=(); TOK_CITADO=(); ININTERPRETAVEL=0; MOTIVO=""
+}
