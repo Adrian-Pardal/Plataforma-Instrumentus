@@ -43,7 +43,7 @@ caso "com 1 issue aberta: não duplica"       0 0 FAKE_ABERTAS=1
 caso "com 3 issues abertas: não duplica"     0 0 FAKE_ABERTAS=3
 
 echo "▶ abrir-issue-ci: erros"
-caso "sem RUN_URL: erro de uso (2)"          2 0 -u RUN_URL
+caso "sem RUN_URL (vazia): erro de uso (2)"  2 0 RUN_URL=
 caso "consulta falhou: não abre às cegas (1)" 1 0 FAKE_LISTA=erro
 caso "criar falhou: propaga o erro (1)"      1 1 FAKE_CRIAR=erro
 
