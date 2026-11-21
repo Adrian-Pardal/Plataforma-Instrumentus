@@ -241,7 +241,7 @@ desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redire
     if [[ "${msk[0]:0:1}" == 0 && "${tok[0]}" == '('* ]]; then
       tok[0]="${tok[0]:1}"; msk[0]="${msk[0]:1}"
       if ((${#tok[0]} == 0)); then _desemb_remover 0 1; fi
-      WRAPPERS+=("("); abriu=1; mudou=1; continue
+      WRAPPERS+=("("); abriu=$((abriu + 1)); mudou=1; continue
     fi
     if [[ "${tok[0]}" == '{' && "${msk[0]}" == 0 ]]; then
       _desemb_remover 0 1; WRAPPERS+=("{"); mudou=1; continue
@@ -252,6 +252,11 @@ desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redire
     w="${tok[p]##*/}"
     case "$w" in
       env)
+        # "env -S 'gh pr merge 1'" entrega o comando todo numa palavra só: não dá para saber o que roda.
+        for ((u = p + 1; u < ${#tok[@]}; u++)); do
+          [[ "${tok[u]}" == -* ]] || break
+          case "${tok[u]}" in -S* | --split-string*) WRAPPER_NAO_SUPORTADO="env"; break 2 ;; esac
+        done
         _desemb_remover "$p" 1
         while ((p < ${#tok[@]})) && [[ "${tok[p]}" == -* ]]; do
           case "${tok[p]}" in
@@ -283,13 +288,13 @@ desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redire
     esac
     WRAPPERS+=("$w"); mudou=1
   done
-  if ((abriu && ${#tok[@]} > 0)); then                   # o ")" que fecha o grupo, colado à última palavra
+  while ((abriu > 0 && ${#tok[@]} > 0)); do              # um ")" para cada "(" aberto, colado à última palavra
     u=$((${#tok[@]} - 1))
-    if [[ "${tok[u]}" == *')' && "${msk[u]: -1}" == 0 ]]; then
-      tok[u]="${tok[u]%)}"; msk[u]="${msk[u]%?}"
-      if ((${#tok[u]} == 0)); then _desemb_remover "$u" 1; fi
-    fi
-  fi
+    [[ "${tok[u]}" == *')' && "${msk[u]: -1}" == 0 ]] || break
+    tok[u]="${tok[u]%)}"; msk[u]="${msk[u]%?}"
+    if ((${#tok[u]} == 0)); then _desemb_remover "$u" 1; fi
+    abriu=$((abriu - 1))
+  done
   TOK=("${tok[@]}"); TOK_CITADO=("${cit[@]}"); TOK_MASCARA=("${msk[@]}")
 }
 
