@@ -3,7 +3,7 @@
 - **Spec:** nenhuma. A fonte dos requisitos é o [ADR 0005](../adr/0005-divisor-de-comandos-para-os-hooks.md)
   (Decisão, itens 1 a 4) e os achados do [ERR-003](../erros/ERR-003-protect-merge-analise-de-texto.md).
   Exceção autorizada pelo dono em 2026-11-20 (a skill `planejar` exige spec Aprovada).
-- **Status:** Aprovado
+- **Status:** Aprovado (reaprovado pelo dono em 2026-11-20, depois de incorporar a revisão do PR #12)
 - **Data:** 2026-11-20
 
 ## Visão técnica
@@ -14,17 +14,28 @@ resultado por variáveis globais (contrato A, o mesmo estilo de `TOK` que os hoo
   de linha fora de aspas.
 - `tokenizar_segmento "$SEG"` → `TOK` (sem aspas), `TOK_CITADO` (1 se o token tinha aspas: texto citado nunca
   vira operador nem opção), `ININTERPRETAVEL` e `MOTIVO`.
-- `separar_redirecionamentos` → tira de `TOK` os redirecionamentos e o alvo, e deixa `REDIR_ALVOS` (o
-  `protect-files` usa).
-- `achar_subcomando PROG` → `SUB` e `ARGS`, pulando flags globais. Há uma tabela de flags que levam valor
-  (gh: `-R`, `--repo`, `--hostname`; git: `-C`, `-c`, `--git-dir`, `--work-tree`, `--namespace`); flag
-  desconhecida é tratada como booleana, e a regra de forma da opção B continua como rede extra.
-- `desembrulhar` → entra em `env`, `command`, `xargs` sem flags e subshell `( )`. `sh -c`, variáveis e aliases
-  ficam fora do alcance.
-Falha fechada: aspas abertas, `$(` ou crase deixam `ININTERPRETAVEL=1`, e o hook bloqueia se o texto cru do
-segmento contém o nome de um programa protegido (`gh`, `git`); a regra exata é fixada com teste na T7.
-O divisor não bloqueia nada: cada hook decide. A migração é em 3 PRs, um hook por vez, e os testes atuais dos
-hooks (`scripts/tests/*.test.sh`) são a rede de segurança: nenhum muda de resultado.
+- `separar_redirecionamentos` → tira de `TOK` os redirecionamentos e o alvo, e deixa `REDIR_ESCRITA` (alvos de
+  `>`, `>>`, `>|`, `&>`) e `REDIR_LEITURA` (alvos de `<` e `<<<`); o `protect-files` precisa do tipo. Heredoc
+  (`<<`, `<<-`) é tratado na T7.
+- `achar_subcomando PROG` → `SUB`, `ARGS` e `DIR_GIT` (o valor de `-C`, que o `protect-push` usa), pulando flags
+  globais. Flags que levam valor na forma `--x valor` (com `=` não consomem o token seguinte): git `-C`, `-c`,
+  `--git-dir`, `--work-tree`, `--namespace`, `--config-env`, `--attr-source`; gh `-R`, `--repo`. (`--hostname`
+  é flag de `gh api`, depois do subcomando.) Flag desconhecida é booleana, e a regra de forma da opção B
+  continua como rede extra.
+- `desembrulhar` → entra em `env`, `command`, `xargs` sem flags, `sudo`, `nohup`, `time` (os que o
+  `protect-files` já pula) e subshell `( )`. `sh -c`, variáveis e aliases ficam fora do alcance.
+
+Falha fechada: aspas abertas, `$(` ou crase em aspas duplas ou sem aspas deixam `ININTERPRETAVEL=1` (em aspas
+simples não são expansão). Regra, fixada com testes na T7: (1) se programa e subcomando se acham nas primeiras
+palavras, vale o subcomando: protegido (`git push`, `gh pr merge`, `gh api`, `gh alias` e os verbos do
+`protect-files`) bloqueia, e `git commit -m "$(cat <<'EOF' ...)"` ou `echo "$(git rev-parse HEAD)"` liberam;
+(2) se não se acham (a primeira palavra é uma expansão), bloqueia quando o texto cru tem `gh` ou `git`.
+
+O `source` do `lib/` falha fechado: `source "$(dirname "${BASH_SOURCE[0]}")/lib/divisor.sh" || bloquear ...`
+(caminho relativo ao próprio hook, nunca ao `cwd`).
+
+O divisor não bloqueia nada: cada hook decide. A migração é em 4 PRs, um hook por vez, e os testes atuais dos
+hooks (`scripts/tests/*.test.sh`) são a rede de segurança.
 
 ## Modelo de dados
 Não se aplica.
@@ -36,18 +47,30 @@ as variáveis globais. Erros: `ININTERPRETAVEL` e `MOTIVO`, nunca `exit` dentro 
 ## Decisões
 - ADR 0005: divisor próprio em bash, compartilhado, com falha fechada.
 - Contrato por variáveis globais (opção A, 2026-11-20): estilo atual dos hooks e sem subshell.
+- Fora deste plano: a alternativa 4 do ADR (fechar squash e rebase no GitHub), que é decisão separada do dono,
+  e o `docs/produto/roadmap.md`, que não existe e é do produto, não da infraestrutura dos hooks.
+- Tag `[infra]` nas tasks, porque a stack é "a definir" (a skill `planejar` prevê `[back]`, `[front]` ou `[ambos]`).
 
 ## Riscos
 - Migração: os 3 hooks tratam aspas e redirecionamento de formas diferentes → regressão. Reduzir: um hook por
   PR; rodar os testes atuais antes e depois; comparar o `rc` em um conjunto de comandos (como no refactor do #8).
 - Tabela de flags com valor incompleta → subcomando errado. Reduzir: flag desconhecida = booleana, regra de
   forma mantida, testes com as formas reais (`gh -R x pr merge`, `gh pr -R x merge`, `gh --paginate=true api`).
+- O `protect-push` atual libera `git --config-env a=B push origin main` e `git --attr-source HEAD push origin
+  main` (confirmado na revisão): é um furo existente, tratado como erro à parte (ERR-004, a registrar) e com
+  testes na T5 e na T10.
 - É uma aproximação do shell: variáveis, `sh -c`, aliases e `cd` não são resolvidos. Reduzir: falha fechada onde
   dá; o resto segue como limitação (o DEBT-002 é reduzido, não quitado).
-- Falsos bloqueios novos pela falha fechada. Reduzir: só bloquear se o segmento tem o nome de um programa
-  protegido; os casos aceitos viram testes.
+- Falsos bloqueios novos pela falha fechada, em especial heredoc (`git commit -m "$(cat <<'EOF' ...)"`) e `$(`
+  em aspas simples. Reduzir: regra por subcomando (acima) e testes na T7.
+- Falha aberta se o `source` do lib falhar: o bash segue sem as funções. Reduzir: `|| bloquear` e um teste que
+  remove o lib e espera 2.
 - Estado global vazando entre segmentos. Reduzir: cada função zera suas variáveis; teste com dois segmentos.
-- `protect-files` usa `compgen -G`, `grep` e `sed`: migrar só o ramo Bash (T11); Edit e Write não mudam.
+- Desempenho: o hook roda em todo comando Bash e varre caractere a caractere. Reduzir: um teste com um comando
+  de alguns KB (T2) e medir antes de migrar o PR 2 e o PR 3.
+- O `protect-files.test.sh` tem só 3 casos de Bash e não serve de rede de segurança: a T11a escreve os testes
+  de caracterização antes da migração. O `protect-files` também usa `compgen -G`, `grep` e `sed`; migra-se só o
+  ramo Bash (Edit e Write não mudam).
 - Sem biblioteca externa: nada a confirmar no Context7 (só bash 5.2, com `read -ra`, `[[ =~ ]]` e arrays,
   que os hooks já usam). Skills de apoio (modelagem-dominio, modelagem-dados, diagrama, contrato-api,
   casos-de-teste): não se aplicam. `modelagem-ameacas` valeria (é um hook de segurança), mas a skill não existe:
@@ -58,48 +81,65 @@ Formato: `T<n> [tag] — descrição · Cobre: D<n> · Teste: <onde>`. Tag `[inf
 Cada commit leva o rodapé `Task: T<n>`. Testes novos em `scripts/tests/divisor.test.sh`.
 Marque com 🎓 as tasks que você faz à mão.
 
-PR 1 (divisor + `protect-merge`):
+PR 1a (divisor):
+- [ ] T0 [infra] — `verify.sh`: incluir `.claude/hooks/lib/*.sh` no shellcheck do modo full e exigir
+  `# shellcheck shell=bash` no lib; ajustar `verify.test.sh` · Cobre: D7 · Teste: verify.test.sh (30 min)
 - [ ] 🎓 T1 [infra] — `lib/divisor.sh` e `dividir_comando`: separa por `&`, `&&`, `||`, `;`, `|`, `|&` e quebra
   de linha, ignorando o que está entre aspas (versão simples) · Cobre: D1 · Teste: divisor.test.sh › separadores (60 min)
-- [ ] T2 [infra] — aspas numa só passada: `"a|b"`, `'x;y'`, apóstrofo dentro de aspas duplas, escape `\` ·
-  Cobre: D1 · Teste: divisor.test.sh › aspas (90 min)
+- [ ] T2 [infra] — aspas numa só passada: `"a|b"`, `'x;y'`, apóstrofo dentro de aspas duplas, escape `\`; mais
+  um comando de alguns KB (desempenho) · Cobre: D1 · Teste: divisor.test.sh › aspas (90 min)
 - [ ] T3 [infra] — `tokenizar_segmento` com `TOK_CITADO`; aspas sem fechar marcam `ININTERPRETAVEL` ·
   Cobre: D1, D4 · Teste: divisor.test.sh › tokens (60 min)
-- [ ] T4 [infra] — `separar_redirecionamentos` (`>`, `>>`, `<`, `2>&1`, `&>`, `>|`, colados a palavra e a texto
-  citado), com os casos do ERR-001 e ERR-002 · Cobre: D1 · Teste: divisor.test.sh › redirecionamentos (90 min)
-- [ ] T5 [infra] — `achar_subcomando` para `gh` e `git`, pulando flags globais · Cobre: D2 ·
-  Teste: divisor.test.sh › subcomando (90 min)
-- [ ] T6 [infra] — `desembrulhar`: `env`, `command`, `xargs` sem flags e subshell · Cobre: D3 ·
-  Teste: divisor.test.sh › wrappers (60 min)
-- [ ] T7 [infra] — falha fechada: `$(`, crase e aspas abertas; fixar a regra do nome de programa protegido ·
-  Cobre: D4 · Teste: divisor.test.sh › falha fechada (60 min)
+- [ ] T4 [infra] — `separar_redirecionamentos` com `REDIR_ESCRITA` e `REDIR_LEITURA` (`>`, `>>`, `<`, `<<<`,
+  `2>&1`, `&>`, `>|`, colados a palavra e a texto citado), com os casos do ERR-001 e ERR-002 · Cobre: D1 ·
+  Teste: divisor.test.sh › redirecionamentos (90 min)
+- [ ] T5 [infra] — `achar_subcomando` para `gh` e `git`, com `DIR_GIT` e a tabela de flags acima; testes
+  `git --config-env a=B push`, `git --attr-source HEAD push`, `gh -R x pr merge`, `gh pr -R x merge`,
+  `gh --paginate=true api` · Cobre: D2 · Teste: divisor.test.sh › subcomando (90 min)
+- [ ] T6 [infra] — `desembrulhar`: `env`, `command`, `xargs` sem flags, `sudo`, `nohup`, `time` e subshell ·
+  Cobre: D3 · Teste: divisor.test.sh › wrappers (60 min)
+- [ ] T7 [infra] — falha fechada com a regra por subcomando, heredoc (`<<`, `<<-`) e `$(`/crase só em aspas
+  duplas ou sem aspas · Cobre: D4 · Teste: divisor.test.sh › falha fechada (60 min)
+
+PR 1b (`protect-merge`):
 - [ ] T8 [infra] — testes **vermelhos** dos achados do PR #8 em `protect-merge.test.sh`: `&` solto, `|&`, flag
-  antes de `api`/`alias`, `gh api` por expansão · Cobre: D1, D2 · Teste: protect-merge.test.sh › achados abertos (60 min)
-- [ ] T9 [infra] — migrar `protect-merge.sh` para o divisor, apagar a lógica antiga de corte e de aspas, manter as
-  regras da opção B · Cobre: D5, D6 · Teste: protect-merge.test.sh inteiro (90 min)
+  antes de `api`/`alias` (o `gh api` por expansão fica no DEBT-002). T8 e T9a vão **no mesmo push**: o hook Stop e
+  o CI exigem 100% · Cobre: D1, D2 · Teste: protect-merge.test.sh › achados abertos (60 min)
+- [ ] T9a [infra] — `protect-merge.sh` passa a usar `dividir_comando`, `tokenizar_segmento` e
+  `separar_redirecionamentos`; `source` com `|| bloquear` e teste que remove o lib e espera 2 · Cobre: D5, D6 ·
+  Teste: protect-merge.test.sh inteiro (90 min)
+- [ ] T9b [infra] — `achar_gh`, `verificar_forma` e `verificar_prefixo` passam a usar `achar_subcomando`;
+  apagar a lógica antiga de corte e de aspas; `gh -R x pr merge` e `gh pr -R x merge` seguem em 2 · Cobre: D5, D6 ·
+  Teste: protect-merge.test.sh inteiro (90 min)
 
 PR 2 (`protect-push`):
-- [ ] T10 [infra] — migrar `protect-push.sh` e testar a suspeita do `>|` · Cobre: D6 ·
-  Teste: protect-push.test.sh (90 min)
+- [ ] T10 [infra] — `protect-push.sh` usa o divisor e `DIR_GIT`; testes vermelhos `git --config-env a=B push
+  origin main`, `git --attr-source HEAD push origin main` e a suspeita do `>|` (origem: Contexto do ADR e
+  ERR-001) · Cobre: D2, D6 · Teste: protect-push.test.sh (90 min)
 
 PR 3 (`protect-files` e docs):
-- [ ] T11 [infra] — migrar o ramo Bash de `protect-files.sh` · Cobre: D6 · Teste: protect-files.test.sh (90 min)
-- [ ] T12 [infra] — docs: `merge-de-pr.md`, `testes-dos-hooks.md`, reescrever o DEBT-002, atualizar o ERR-003 ·
-  Cobre: D7 · Teste: `verify.sh full` (60 min)
+- [ ] T11a [infra] — testes de **caracterização** do ramo Bash do `protect-files` com o resultado atual (`>`,
+  `>>`, `<`, `tee`/`cp`/`mv`/`rm`, `sed -i`, `sudo cat .env`, glob `.env*`) · Cobre: D6 ·
+  Teste: protect-files.test.sh (60 min)
+- [ ] T11b [infra] — migrar o ramo Bash de `protect-files.sh` para o divisor · Cobre: D6 ·
+  Teste: protect-files.test.sh (90 min)
+- [ ] T12 [infra] — docs: `merge-de-pr.md`, `testes-dos-hooks.md`, reescrever o DEBT-002; **fechar o ERR-003 só
+  se o dono aceitar de forma explícita a limitação residual**, e essa decisão é dele · Cobre: D7 ·
+  Teste: `verify.sh full` (60 min)
 
 ## Rastreabilidade
 Requisitos vêm do ADR 0005. D1 divisor (aspas, separadores, tokens, redirecionamentos) · D2 subcomando pulando
 flags · D3 wrappers e subshell · D4 falha fechada · D5 regras da opção B mantidas · D6 testes atuais não mudam de
-resultado · D7 docs e dívida.
+resultado; se algum precisar mudar, a mudança é justificada no commit e no plano (como no ADR) · D7 docs e dívida.
 
 | Requisito | Task | Teste |
 |-----------|------|-------|
 | D1 | T1–T4, T8 | divisor.test.sh (separadores, aspas, tokens, redirecionamentos); protect-merge.test.sh (achados) |
-| D2 | T5, T8 | divisor.test.sh › subcomando; protect-merge.test.sh |
+| D2 | T5, T8, T10 | divisor.test.sh › subcomando; protect-merge.test.sh; protect-push.test.sh |
 | D3 | T6 | divisor.test.sh › wrappers |
 | D4 | T3, T7 | divisor.test.sh › falha fechada |
-| D5 | T9 | protect-merge.test.sh (seção expansões) |
-| D6 | T9, T10, T11 | os 3 `*.test.sh` dos hooks |
-| D7 | T12 | `verify.sh full` |
+| D5 | T9a, T9b | protect-merge.test.sh (seção expansões) |
+| D6 | T9a, T9b, T10, T11a, T11b | os 3 `*.test.sh` dos hooks |
+| D7 | T0, T12 | verify.test.sh; `verify.sh full` |
 
-Lacuna declarada: D7 é documentação e não tem teste próprio, só o `verify.sh full`.
+Lacuna declarada: a parte de documentação do D7 (T12) não tem teste próprio, só o `verify.sh full`.
