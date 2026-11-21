@@ -42,6 +42,9 @@ você cria uma vez (passo 1). Cada modelo de issue aplica a sua etiqueta sozinho
 4. **Issue automática do CI:** se um push na `main` falhar, o job `registrar-falha` (em `ci.yml`) roda
    `scripts/abrir-issue-ci.sh`. Ele abre a issue "CI falhou na main", com a etiqueta `incidente`, o link
    do log e o commit. Se já houver uma issue aberta com essa etiqueta e esse título, não abre outra.
+   A checagem busca o título como texto (`in:title`), não por igualdade exata: uma issue aberta com
+   etiqueta `incidente` e um título parecido também impede a abertura. Falhas simultâneas na `main` são
+   atendidas uma por vez (`concurrency` do job), então não duplicam.
    Para ver o log: `gh run view <id> --log-failed`.
 
 ## COMO CONFERIR QUE DEU CERTO

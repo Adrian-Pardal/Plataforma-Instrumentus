@@ -93,6 +93,11 @@ jobs:
     if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # Um de cada vez: com dois pushes falhando juntos, o segundo espera o primeiro abrir a issue
+    # e então vê que já há uma aberta. Não cancela (cancel-in-progress: false).
+    concurrency:
+      group: registrar-falha
+      cancel-in-progress: false
     permissions:
       contents: read
       issues: write   # criar a issue e consultar as abertas
