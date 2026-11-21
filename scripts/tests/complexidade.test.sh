@@ -27,6 +27,7 @@ caso "função sem decisão vale 1"            0 "1 f()"  $'f() {\n  echo oi\n}'
 caso "if, elif, while, for, && e ||"        0 "7 f()"  $'f() {\n  if a; then b; elif c; then d; fi\n  while e; do f; done\n  for g in h; do :; done\n  x && y || z\n}'
 caso "cada ramo de case conta 1"            0 "4 f()"  $'f() {\n  case "$1" in\n    a) x ;;\n    b) y ;;\n    *) z ;;\n  esac\n}'
 caso "if em aspas ou comentário não conta"  0 "1 f()"  $'f() {\n  echo "if a && b"   # while x\n}'
+caso "palavra reservada no padrão do case não conta" 0 "4 f()" $'f() {\n  case "$1" in\n    if | while | until) x ;;\n    elif | for) y ;;\n    *) z ;;\n  esac\n}'
 
 echo "▶ complexidade.sh: limite e uso"
 caso "acima do limite reprova (1)"          1 "3 f()"  $'f() {\n  if a; then b; fi\n  if c; then d; fi\n}' -l 2
