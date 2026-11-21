@@ -352,7 +352,7 @@ achar_subcomando() {   # usa TOK (depois de tokenizar_segmento e separar_redirec
 # consulta e não executa: não se desembrulha. "xargs" com flags não é desembrulhado e fica em WRAPPER_NAO_SUPORTADO.
 desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redirecionamentos)
   local -a tok=("${TOK[@]}") cit=("${TOK_CITADO[@]}") msk=("${TOK_MASCARA[@]}")
-  local p w u mudou=1 abriu=0
+  local p q u w mudou=1
   WRAPPERS=(); WRAPPER_NAO_SUPORTADO=""
   while ((mudou && ${#tok[@]} > 0)); do
     mudou=0
@@ -360,7 +360,7 @@ desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redire
     if [[ "${msk[0]:0:1}" == 0 && "${tok[0]}" == '('* ]]; then
       tok[0]="${tok[0]:1}"; msk[0]="${msk[0]:1}"
       if ((${#tok[0]} == 0)); then _desemb_remover 0 1; fi
-      WRAPPERS+=("("); abriu=$((abriu + 1)); mudou=1; continue
+      WRAPPERS+=("("); mudou=1; continue
     fi
     if [[ "${tok[0]}" == '{' && "${msk[0]}" == 0 ]]; then
       _desemb_remover 0 1; WRAPPERS+=("{"); mudou=1; continue
@@ -368,53 +368,98 @@ desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redire
     p=0                                                  # o wrapper vem depois de eventuais "VAR=valor"
     while ((p < ${#tok[@]})) && [[ "${tok[p]}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do p=$((p + 1)); done
     ((p < ${#tok[@]})) || break
+    if [[ "${tok[p]}" == *')' && "${msk[p]: -1}" == 0 ]]; then   # "b) git push": o padrão de um case
+      _desemb_remover "$p" 1; WRAPPERS+=("case"); mudou=1; continue
+    fi
     w="${tok[p]##*/}"
     case "$w" in
+      if | then | else | elif | do | while | until | '!')       # palavras reservadas: só valem soltas
+        [[ "${msk[p]}" == *1* ]] && break                       # "then" entre aspas é um comando com esse nome
+        _desemb_remover "$p" 1 ;;
+      case)
+        q=$p
+        while ((q < ${#tok[@]})) && ! [[ "${tok[q]}" == *')' && "${msk[q]: -1}" == 0 ]]; do q=$((q + 1)); done
+        if ((q >= ${#tok[@]})); then WRAPPER_NAO_SUPORTADO="case"; break; fi
+        _desemb_remover "$p" $((q - p + 1)) ;;                  # tira "case x in padrão)"
       env)
-        # "env -S 'gh pr merge 1'" entrega o comando todo numa palavra só: não dá para saber o que roda.
-        for ((u = p + 1; u < ${#tok[@]}; u++)); do
-          [[ "${tok[u]}" == -* ]] || break
-          case "${tok[u]}" in -S* | --split-string*) WRAPPER_NAO_SUPORTADO="env"; break 2 ;; esac
-        done
-        _desemb_remover "$p" 1
-        while ((p < ${#tok[@]})) && [[ "${tok[p]}" == -* ]]; do
-          case "${tok[p]}" in
-            -u | -C | --unset | --chdir) _desemb_remover "$p" 2 ;;   # opções com valor no token seguinte
-            *) _desemb_remover "$p" 1 ;;                            # -i, -0, -v...: booleanas
-          esac
-        done ;;
+        if _desemb_env_tem_s; then WRAPPER_NAO_SUPORTADO="env"; break; fi   # "env -S 'git push'": uma palavra só
+        _desemb_remover "$p" 1; _desemb_opcoes "-u -C --unset --chdir" ;;
       command)
-        case "${tok[p + 1]:-}" in -v | -V) break ;; esac            # "command -v gh" só consulta: não executa
-        _desemb_remover "$p" 1
-        if [[ "${tok[p]:-}" == -p ]]; then _desemb_remover "$p" 1; fi ;;
-      builtin | nohup) _desemb_remover "$p" 1 ;;
-      time)
-        _desemb_remover "$p" 1
-        if [[ "${tok[p]:-}" == -p ]]; then _desemb_remover "$p" 1; fi ;;
+        case "${tok[p + 1]:-}" in -v | -V) break ;; esac        # "command -v gh" só consulta: não executa
+        _desemb_remover "$p" 1; _desemb_opcoes "" ;;
+      time) _desemb_remover "$p" 1; _desemb_opcoes "-f -o --format --output" ;;
+      builtin | nohup | noglob) _desemb_remover "$p" 1 ;;
+      setsid) _desemb_remover "$p" 1; _desemb_opcoes "" ;;
+      exec) _desemb_remover "$p" 1; _desemb_opcoes "-a" ;;
       sudo)
         _desemb_remover "$p" 1
-        while ((p < ${#tok[@]})) && [[ "${tok[p]}" == -* ]]; do
-          case "${tok[p]}" in
-            -u | -g | -h | -p | -C | -D | -r | -t | -U | -T | --user | --group | --host | --prompt | --chdir) _desemb_remover "$p" 2 ;;
-            --) _desemb_remover "$p" 1; break ;;
-            *) _desemb_remover "$p" 1 ;;
-          esac
-        done ;;
+        _desemb_opcoes "-u -g -h -p -C -D -r -t -U -T --user --group --host --prompt --chdir" ;;
+      timeout)
+        _desemb_remover "$p" 1; _desemb_opcoes "-s -k --signal --kill-after"
+        if ((p < ${#tok[@]})); then _desemb_remover "$p" 1; fi   # a duração ("5", "1m")
+        ;;
+      nice) _desemb_remover "$p" 1; _desemb_opcoes "-n --adjustment" ;;
+      stdbuf) _desemb_remover "$p" 1; _desemb_opcoes "-i -o -e --input --output --error" ;;
+      ionice) _desemb_remover "$p" 1; _desemb_opcoes "-c -n --class --classdata" ;;
       xargs)
         if [[ "${tok[p + 1]:-}" == -* ]]; then WRAPPER_NAO_SUPORTADO="xargs"; break; fi   # com flags, não sabemos o que ele faz
         _desemb_remover "$p" 1 ;;
+      eval | watch | coproc | parallel) WRAPPER_NAO_SUPORTADO="$w"; break ;;   # rodam um texto ou outro comando que não abrimos
+      find)
+        for ((u = p + 1; u < ${#tok[@]}; u++)); do
+          case "${tok[u]}" in -exec | -execdir | -ok | -okdir) WRAPPER_NAO_SUPORTADO="find" ;; esac
+        done
+        break ;;
       *) break ;;
     esac
     WRAPPERS+=("$w"); mudou=1
   done
-  while ((abriu > 0 && ${#tok[@]} > 0)); do              # um ")" para cada "(" aberto, colado à última palavra
+  _desemb_aparar_parenteses
+  TOK=("${tok[@]}"); TOK_CITADO=("${cit[@]}"); TOK_MASCARA=("${msk[@]}")
+}
+
+# Tira as opções de um wrapper a partir de tok[p]. $1 = as opções que levam um valor no token seguinte (separadas
+# por espaço); as demais são booleanas. "--" encerra as opções. Usa tok, cit, msk e p de quem chamou.
+_desemb_opcoes() {
+  local com_valor=" $1 "
+  while ((p < ${#tok[@]})) && [[ "${tok[p]}" == -* && "${tok[p]}" != '-' ]]; do
+    if [[ "${tok[p]}" == '--' ]]; then _desemb_remover "$p" 1; break; fi
+    if [[ "$com_valor" == *" ${tok[p]} "* ]]; then _desemb_remover "$p" 2; else _desemb_remover "$p" 1; fi
+  done
+}
+
+# "env -S 'texto'" (também "-iS", "-vS", "--split-string") entrega o comando todo numa palavra só.
+# Devolve 0 se alguma opção do env em tok[p] é -S. Usa tok e p de quem chamou.
+_desemb_env_tem_s() {
+  local u=$((p + 1))
+  while ((u < ${#tok[@]})) && [[ "${tok[u]}" == -* ]]; do
+    case "${tok[u]}" in
+      -u | -C | --unset | --chdir) u=$((u + 1)) ;;                # o valor não é opção
+      --split-string* | -S* | -[!-]*S*) return 0 ;;
+    esac
+    u=$((u + 1))
+  done
+  return 1
+}
+
+# Se sobraram mais ")" soltos do que "(" soltos (o divisor cortou um "( cd /x; git push --force)" no ";"), tira os
+# ")" a mais do fim da última palavra. ")" e "(" entre aspas ou protegidos por barra não contam.
+_desemb_aparar_parenteses() {
+  local k c n abre=0 fecha=0 u
+  for ((k = 0; k < ${#tok[@]}; k++)); do
+    n=${#tok[k]}
+    for ((c = 0; c < n; c++)); do
+      [[ "${msk[k]:c:1}" == 0 ]] || continue
+      case "${tok[k]:c:1}" in '(') abre=$((abre + 1)) ;; ')') fecha=$((fecha + 1)) ;; esac
+    done
+  done
+  while ((fecha > abre && ${#tok[@]} > 0)); do
     u=$((${#tok[@]} - 1))
     [[ "${tok[u]}" == *')' && "${msk[u]: -1}" == 0 ]] || break
     tok[u]="${tok[u]%)}"; msk[u]="${msk[u]%?}"
     if ((${#tok[u]} == 0)); then _desemb_remover "$u" 1; fi
-    abriu=$((abriu - 1))
+    fecha=$((fecha - 1))
   done
-  TOK=("${tok[@]}"); TOK_CITADO=("${cit[@]}"); TOK_MASCARA=("${msk[@]}")
 }
 
 # Tira $2 palavras a partir da posição $1 de tok, cit e msk (os arrays de quem chamou: ver _divisor_fechar).
