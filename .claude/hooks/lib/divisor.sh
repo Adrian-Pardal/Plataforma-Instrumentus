@@ -72,6 +72,129 @@ _divisor_ler_corpos() {
   hd_delim=(); hd_quoted=(); hd_tab=()
 }
 
+# Os helpers _divisor_* abaixo são as regras de dividir_comando, uma por função. Eles não têm variáveis próprias
+# de estado: leem e mudam as locais de dividir_comando (L, i, c, ant, prox, atual, aspa, dolar*, escapou*, arit,
+# hd_*), porque em bash uma função enxerga as variáveis locais de quem a chamou (ver _divisor_fechar).
+
+# Prepara a letra i: c (ela), prox (a seguinte, vazia no fim do texto), ant (a anterior, vazia no começo) e o
+# contexto vindo da letra anterior.
+_divisor_contexto() {
+  c="${L[i]}"
+  prox="${L[i+1]}"
+  ant=""; ((i > 0)) && ant="${L[i-1]}"
+  dolar_prev=$dolar; dolar=0           # a letra anterior foi um "$" solto? (para reconhecer $'...')
+  escapou_prev=$escapou; escapou=0     # a letra anterior foi protegida por barra?
+}
+
+# Dentro de aspas nada separa: só acumula a letra e acompanha onde as aspas fecham.
+_divisor_em_aspas() {
+  if [[ "$aspa" != "'" && "$c" == $'\\' ]]; then
+    atual+="$c$prox"; i=$((i + 1))     # em aspas duplas e em $'...', a barra protege a letra seguinte
+    return 0
+  fi
+  atual+="$c"
+  if [[ "$aspa" == "A" ]]; then        # "A" = $'...' (ANSI-C): fecha na aspa simples
+    [[ "$c" == "'" ]] && aspa=""
+  else
+    [[ "$c" == "$aspa" ]] && aspa=""   # achou a aspa que fecha
+  fi
+  return 0
+}
+
+# Fora de aspas: a barra protege a letra seguinte e as aspas abrem um trecho protegido.
+_divisor_protecao() {
+  case "$c" in
+    $'\\') atual+="$c$prox"; i=$((i + 1)); escapou=1 ;;
+    '"') aspa='"'; atual+="$c" ;;
+    "'") if ((dolar_prev)); then aspa="A"; else aspa="'"; fi; atual+="$c" ;;   # $'...' (ANSI-C) ou aspas simples
+  esac
+}
+
+# Devolve 0 se a letra anterior deixa um # abrir comentário (começo do texto, espaço, tab, quebra, ; & | ou "(").
+_divisor_inicio_de_palavra() {
+  case "$ant" in
+    '' | ' ' | $'\t' | $'\n' | ';' | '&' | '|' | '(') return 0 ;;
+  esac
+  return 1
+}
+
+# Um # no começo de palavra abre comentário até o fim da linha; em "a#b" ou "$#" é só uma letra.
+_divisor_comentario() {
+  if ((escapou_prev == 0)) && _divisor_inicio_de_palavra; then
+    while ((i + 1 < tam)) && [[ "${L[i+1]}" != $'\n' ]]; do i=$((i + 1)); done   # some até a quebra de linha
+  else
+    atual+="$c"
+  fi
+}
+
+# "$((": aritmética, o "<<" de dentro não é heredoc. Qualquer outro "$" só avisa a letra seguinte (dolar).
+_divisor_dolar() {
+  atual+="$c"; dolar=1
+  if [[ "$prox" == '(' && "${L[i+2]}" == '(' ]]; then
+    atual+="(("; i=$((i + 2)); arit=2; dolar=0
+  fi
+}
+
+# "(" e ")" só importam para fechar a aritmética aberta por "$((".
+_divisor_parenteses() {
+  atual+="$c"
+  ((arit > 0)) || return 0
+  if [[ "$c" == '(' ]]; then arit=$((arit + 1)); else arit=$((arit - 1)); fi
+}
+
+# "<<" que não é "<<<" (here-string) e fora de aritmética é heredoc: guarda o delimitador; o corpo é lido no
+# fim da linha.
+_divisor_menor() {
+  atual+="$c"
+  if ((arit == 0)) && [[ "$prox" == '<' && "${L[i+2]}" != '<' && "$ant" != '<' ]]; then
+    _divisor_registrar_heredoc
+  fi
+}
+
+# As letras que mexem na aritmética ou abrem heredoc.
+_divisor_expansoes() {
+  case "$c" in
+    '$') _divisor_dolar ;;
+    '(' | ')') _divisor_parenteses ;;
+    '<') _divisor_menor ;;
+  esac
+}
+
+# "|": pipe simples, "||" e "|&" (2 letras) ou o ">|" de um redirecionamento.
+_divisor_pipe() {
+  if [[ "$ant" == '>' ]]; then
+    atual+="$c"                        # ">|" é redirecionamento, não pipe
+  elif [[ "$prox" == '|' || "$prox" == '&' ]]; then
+    _divisor_fechar; i=$((i + 1))      # "||" e "|&" têm 2 letras: pula a segunda
+  else
+    _divisor_fechar                    # pipe simples
+  fi
+}
+
+# "&": "&&" (2 letras), redirecionamento ("2>&1", ">&", "&>") ou comando em segundo plano.
+_divisor_e_comercial() {
+  if [[ "$prox" == '&' ]]; then
+    _divisor_fechar; i=$((i + 1))      # "&&" tem 2 letras: pula a segunda
+  elif [[ "$ant" == '>' || "$prox" == '>' ]]; then
+    atual+="$c"                        # "2>&1", ">&" e "&>" são redirecionamentos
+  else
+    _divisor_fechar                    # "&" sozinho: comando em segundo plano
+  fi
+}
+
+# As letras que separam comandos: ; quebra de linha | &.
+_divisor_separador() {
+  case "$c" in
+    ';') _divisor_fechar ;;
+    $'\n')
+      _divisor_fechar
+      if ((${#hd_delim[@]} > 0)); then _divisor_ler_corpos; fi   # o corpo do heredoc começa na linha seguinte
+      ;;
+    '|') _divisor_pipe ;;
+    '&') _divisor_e_comercial ;;
+  esac
+}
+
 # Divide um comando do shell em segmentos (um por comando) e deixa o resultado em SEGMENTOS.
 # Lê o texto uma letra por vez. Separadores: & && || ; | |& e quebra de linha, fora de aspas.
 # A barra \ protege a letra seguinte (fora de aspas, em aspas duplas e em $'...', não em aspas simples):
@@ -88,71 +211,13 @@ dividir_comando() {   # $1 = o texto do comando
   _divisor_letras "$cmd" L
   SEGMENTOS=()
   for ((i = 0; i < tam; i++)); do
-    c="${L[i]}"
-    prox="${L[i+1]}"                     # a letra seguinte (vazia no fim do texto)
-    ant=""; ((i > 0)) && ant="${L[i-1]}"   # a letra anterior (vazia no começo)
-    dolar_prev=$dolar; dolar=0           # a letra anterior foi um "$" solto? (para reconhecer $'...')
-    escapou_prev=$escapou; escapou=0     # a letra anterior foi protegida por barra?
-
-    if [[ -n "$aspa" ]]; then            # dentro de aspas: nada separa, só acumula
-      if [[ "$aspa" != "'" && "$c" == $'\\' ]]; then
-        atual+="$c$prox"; i=$((i + 1))   # em aspas duplas e em $'...', a barra protege a letra seguinte
-        continue
-      fi
-      atual+="$c"
-      if [[ "$aspa" == "A" ]]; then     # "A" = $'...' (ANSI-C): fecha na aspa simples
-        [[ "$c" == "'" ]] && aspa=""
-      else
-        [[ "$c" == "$aspa" ]] && aspa=""   # achou a aspa que fecha
-      fi
-      continue
-    fi
-
+    _divisor_contexto
+    if [[ -n "$aspa" ]]; then _divisor_em_aspas; continue; fi   # dentro de aspas: nada separa, só acumula
     case "$c" in
-      $'\\') atual+="$c$prox"; i=$((i + 1)); escapou=1 ;;   # fora de aspas, a barra protege a letra seguinte
-      '"') aspa='"'; atual+="$c" ;;                          # abriu aspas duplas
-      "'")
-        if ((dolar_prev)); then aspa="A"; else aspa="'"; fi  # $'...' (ANSI-C) ou aspas simples
-        atual+="$c" ;;
-      '#')
-        if [[ ($escapou_prev -eq 0) && ( -z "$ant" || "$ant" == ' ' || "$ant" == $'\t' || "$ant" == $'\n' \
-          || "$ant" == ';' || "$ant" == '&' || "$ant" == '|' || "$ant" == '(' ) ]]; then
-          while ((i + 1 < tam)) && [[ "${L[i+1]}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: some até a quebra de linha
-        else
-          atual+="$c"                                        # "a#b", "$#": não é comentário
-        fi ;;
-      '$')
-        atual+="$c"; dolar=1
-        if [[ "$prox" == '(' && "${L[i+2]}" == '(' ]]; then
-          atual+="(("; i=$((i + 2)); arit=2; dolar=0         # "$((": aritmética, o "<<" de dentro não é heredoc
-        fi ;;
-      '(') atual+="$c"; if ((arit > 0)); then arit=$((arit + 1)); fi ;;
-      ')') atual+="$c"; if ((arit > 0)); then arit=$((arit - 1)); fi ;;
-      ';') _divisor_fechar ;;
-      $'\n')
-        _divisor_fechar
-        if ((${#hd_delim[@]} > 0)); then _divisor_ler_corpos; fi   # o corpo do heredoc começa na linha seguinte
-        ;;
-      '<')
-        atual+="$c"
-        # "<<" que não é "<<<" (here-string): heredoc. Guarda o delimitador; o corpo é lido no fim da linha.
-        if ((arit == 0)) && [[ "$prox" == '<' && "${L[i+2]}" != '<' && "$ant" != '<' ]]; then _divisor_registrar_heredoc; fi ;;
-      '|')
-        if [[ "$ant" == '>' ]]; then
-          atual+="$c"                                      # ">|" é redirecionamento, não pipe
-        elif [[ "$prox" == '|' || "$prox" == '&' ]]; then
-          _divisor_fechar; i=$((i + 1))                    # "||" e "|&" têm 2 letras: pula a segunda
-        else
-          _divisor_fechar                                  # pipe simples
-        fi ;;
-      '&')
-        if [[ "$prox" == '&' ]]; then
-          _divisor_fechar; i=$((i + 1))                    # "&&" tem 2 letras: pula a segunda
-        elif [[ "$ant" == '>' || "$prox" == '>' ]]; then
-          atual+="$c"                                      # "2>&1", ">&" e "&>" são redirecionamentos
-        else
-          _divisor_fechar                                  # "&" sozinho: comando em segundo plano
-        fi ;;
+      $'\\' | '"' | "'") _divisor_protecao ;;
+      '#') _divisor_comentario ;;
+      '$' | '(' | ')' | '<') _divisor_expansoes ;;
+      ';' | $'\n' | '|' | '&') _divisor_separador ;;
       *) atual+="$c" ;;
     esac
   done
