@@ -84,7 +84,7 @@ Marque com 🎓 as tasks que você faz à mão.
 PR 1a (divisor):
 - [x] T0 [infra] — `verify.sh`: incluir `.claude/hooks/lib/*.sh` no shellcheck do modo full e exigir
   `# shellcheck shell=bash` no lib; ajustar `verify.test.sh` · Cobre: D7 · Teste: verify.test.sh (30 min)
-- [ ] 🎓 T1 [infra] — `lib/divisor.sh` e `dividir_comando`: separa por `&`, `&&`, `||`, `;`, `|`, `|&` e quebra
+- [x] 🎓 T1 [infra] — `lib/divisor.sh` e `dividir_comando`: separa por `&`, `&&`, `||`, `;`, `|`, `|&` e quebra
   de linha, ignorando o que está entre aspas (versão simples) · Cobre: D1 · Teste: divisor.test.sh › separadores (60 min)
 - [ ] T2 [infra] — aspas numa só passada: `"a|b"`, `'x;y'`, apóstrofo dentro de aspas duplas, escape `\`; mais
   um comando de alguns KB (desempenho) · Cobre: D1 · Teste: divisor.test.sh › aspas (90 min)
