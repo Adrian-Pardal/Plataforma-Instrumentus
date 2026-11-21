@@ -235,6 +235,130 @@ _tokenizar_fechar() {
   atual=""; mascara=""; tem=0; citado=0
 }
 
+# Os helpers _tokenizar_* usam as variáveis locais de tokenizar_segmento (L, i, c, prox, atual, mascara, tem,
+# citado, aspa, expande, obscuro, dolar*, escapou*), como _tokenizar_fechar.
+
+# Prepara a letra i: c, prox (vazia no fim do texto) e o contexto vindo da letra anterior.
+_tokenizar_contexto() {
+  c="${L[i]}"
+  prox="${L[i+1]}"
+  dolar_prev=$dolar; dolar=0; escapou_prev=$escapou; escapou=0
+}
+
+# Aspas simples: tudo é literal até a aspa que fecha.
+_tokenizar_aspas_simples() {
+  if [[ "$c" == "'" ]]; then aspa=""; else atual+="$c"; mascara+="1"; fi
+}
+
+# $'...' (ANSI-C): a barra escreve uma letra especial. \n \t \r e \\ \' \" são decodificados; o resto (\x70,
+# \101, \u...) não é, e o hook não pode confiar no que sai (obscuro).
+_tokenizar_ansi_barra() {
+  local lit
+  case "$prox" in
+    $'\\' | "'" | '"') lit="$prox" ;;
+    n) lit=$'\n' ;;
+    t) lit=$'\t' ;;
+    r) lit=$'\r' ;;
+    *) atual+="$c"; mascara+="1"; obscuro=1; return 0 ;;
+  esac
+  atual+="$lit"; mascara+="1"; i=$((i + 1))
+}
+
+_tokenizar_ansi() {
+  if [[ "$c" == "'" ]]; then
+    aspa=""
+  elif [[ "$c" == $'\\' ]]; then
+    _tokenizar_ansi_barra
+  else
+    atual+="$c"; mascara+="1"
+  fi
+}
+
+# Aspas duplas: a barra só protege " \ $ e crase; em "\b" a barra fica.
+_tokenizar_dupla_barra() {
+  case "$prox" in
+    '"' | $'\\' | '$' | '`') atual+="$prox"; mascara+="1"; i=$((i + 1)) ;;
+    *) atual+="$c"; mascara+="1" ;;
+  esac
+}
+
+# Aspas duplas: crase e "$(" ainda executam (expande).
+_tokenizar_aspas_duplas() {
+  if [[ "$c" == '"' ]]; then
+    aspa=""
+  elif [[ "$c" == $'\\' ]]; then
+    _tokenizar_dupla_barra
+  else
+    atual+="$c"; mascara+="1"
+    if [[ "$c" == '`' || ( "$c" == '$' && "$prox" == '(' ) ]]; then expande=1; fi   # o shell executa isto
+  fi
+}
+
+# Fora de aspas, abriu " ou ': a palavra existe, mesmo vazia (""), e $' abre ANSI-C.
+_tokenizar_abre_aspas() {
+  tem=1; citado=1
+  if [[ "$c" == '"' ]]; then aspa='"'; return 0; fi
+  if ((dolar_prev)); then                  # $'...': o "$" que acabou de entrar não é da palavra
+    atual="${atual%$}"; mascara="${mascara%?}"; aspa="A"
+  else
+    aspa="'"
+  fi
+}
+
+# Fora de aspas, a barra protege a letra seguinte; barra + quebra de linha é continuação e some.
+_tokenizar_barra() {
+  escapou=1
+  if [[ "$prox" == $'\n' ]]; then i=$((i + 1)); return 0; fi
+  tem=1; citado=1
+  if [[ -n "$prox" ]]; then atual+="$prox"; mascara+="1"; fi
+  i=$((i + 1))
+}
+
+# Um # no começo de palavra abre comentário até a quebra de linha; em "a#b" faz parte da palavra.
+_tokenizar_comentario() {
+  if ((tem == 0 && escapou_prev == 0)); then
+    while ((i + 1 < tam)) && [[ "${L[i+1]}" != $'\n' ]]; do i=$((i + 1)); done
+  else
+    atual+="$c"; mascara+="0"; tem=1
+  fi
+}
+
+# Crase, "$(", "<(" e ">(": o shell executa o que está dentro (expande). O "$" também avisa a letra seguinte (dolar).
+_tokenizar_expansao() {
+  atual+="$c"; mascara+="0"; tem=1
+  case "$c" in
+    '`') expande=1 ;;
+    '$') dolar=1; [[ "$prox" == '(' ]] && expande=1 ;;
+    *) [[ "$prox" == '(' ]] && expande=1 ;;      # "<(" e ">("
+  esac
+}
+
+# Fora de aspas.
+_tokenizar_solto() {
+  case "$c" in
+    '"' | "'") _tokenizar_abre_aspas ;;
+    $'\\') _tokenizar_barra ;;
+    ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
+    '#') _tokenizar_comentario ;;
+    '`' | '$' | '<' | '>') _tokenizar_expansao ;;
+    *) atual+="$c"; mascara+="0"; tem=1 ;;
+  esac
+}
+
+# Decide se o segmento é ininterpretável e por quê (deixa em ININTERPRETAVEL e MOTIVO).
+_tokenizar_veredito() {
+  if [[ -n "$aspa" ]]; then
+    ININTERPRETAVEL=1
+    if [[ "$aspa" == "A" ]]; then MOTIVO="aspas sem fechar (\$')"; else MOTIVO="aspas sem fechar (${aspa})"; fi
+  elif ((expande)); then                 # em aspas simples ou com barra não conta: o shell não executa
+    ININTERPRETAVEL=1
+    MOTIVO="expansão \$(, crase ou <( >(: o que roda só se sabe depois do shell"
+  elif ((obscuro)); then
+    ININTERPRETAVEL=1
+    MOTIVO="escape de \$'...' que o divisor não decodifica (\\x, \\u, octal...)"
+  fi
+}
+
 # Quebra UM segmento em palavras, como o shell as entregaria ao programa (sem aspas nem barras de proteção).
 # Deixa em TOK as palavras, em TOK_CITADO (1 se a palavra teve aspas ou barra), em TOK_MASCARA (uma letra por
 # letra da palavra: 1 se veio de aspas ou barra, 0 se foi escrita solta), em ININTERPRETAVEL (1 se há aspa sem
@@ -247,82 +371,16 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   _divisor_letras "$seg" L
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); ININTERPRETAVEL=0; MOTIVO=""
   for ((i = 0; i < tam; i++)); do
-    c="${L[i]}"
-    prox="${L[i+1]}"
-    dolar_prev=$dolar; dolar=0; escapou_prev=$escapou; escapou=0
-
-    if [[ "$aspa" == "'" ]]; then        # aspas simples: tudo é literal até a aspa que fecha
-      if [[ "$c" == "'" ]]; then aspa=""; else atual+="$c"; mascara+="1"; fi
-    elif [[ "$aspa" == "A" ]]; then      # $'...' (ANSI-C): a barra escreve uma letra especial
-      if [[ "$c" == "'" ]]; then
-        aspa=""
-      elif [[ "$c" == $'\\' ]]; then
-        case "$prox" in
-          $'\\' | "'" | '"') atual+="$prox"; mascara+="1"; i=$((i + 1)) ;;
-          n) atual+=$'\n'; mascara+="1"; i=$((i + 1)) ;;
-          t) atual+=$'\t'; mascara+="1"; i=$((i + 1)) ;;
-          r) atual+=$'\r'; mascara+="1"; i=$((i + 1)) ;;
-          *) atual+="$c"; mascara+="1"; obscuro=1 ;;   # \x70, \101, \u...: não decodificamos; o hook não pode confiar
-        esac
-      else
-        atual+="$c"; mascara+="1"
-      fi
-    elif [[ "$aspa" == '"' ]]; then      # aspas duplas: só a barra tem efeito
-      if [[ "$c" == '"' ]]; then
-        aspa=""
-      elif [[ "$c" == $'\\' ]]; then
-        case "$prox" in
-          '"' | $'\\' | '$' | '`') atual+="$prox"; mascara+="1"; i=$((i + 1)) ;;   # a barra protege só estas 4 letras
-          *) atual+="$c"; mascara+="1" ;;                                          # em "\b" a barra fica
-        esac
-      else
-        atual+="$c"; mascara+="1"
-        if [[ "$c" == '`' || ( "$c" == '$' && "$prox" == '(' ) ]]; then expande=1; fi   # o shell executa isto
-      fi
-    else                                 # fora de aspas
-      case "$c" in
-        '"') aspa="$c"; tem=1; citado=1 ;;         # abriu aspas duplas (a palavra existe, mesmo vazia: "")
-        "'")
-          if ((dolar_prev)); then                  # $'...': o "$" que acabou de entrar não é da palavra
-            atual="${atual%$}"; mascara="${mascara%?}"; aspa="A"
-          else
-            aspa="'"
-          fi
-          tem=1; citado=1 ;;
-        $'\\')
-          escapou=1
-          if [[ "$prox" == $'\n' ]]; then
-            i=$((i + 1))                           # barra + quebra de linha: continuação, some
-          else
-            tem=1; citado=1
-            if [[ -n "$prox" ]]; then atual+="$prox"; mascara+="1"; fi   # a barra protege a letra seguinte
-            i=$((i + 1))
-          fi ;;
-        ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
-        '#')
-          if ((tem == 0 && escapou_prev == 0)); then
-            while ((i + 1 < tam)) && [[ "${L[i+1]}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: ignora até a quebra
-          else
-            atual+="$c"; mascara+="0"; tem=1         # "a#b": faz parte da palavra
-          fi ;;
-        '`') atual+="$c"; mascara+="0"; tem=1; expande=1 ;;           # crase: o shell executa o que está dentro
-        '$') atual+="$c"; mascara+="0"; tem=1; dolar=1; [[ "$prox" == '(' ]] && expande=1 ;;   # "$(": idem
-        '<' | '>') atual+="$c"; mascara+="0"; tem=1; [[ "$prox" == '(' ]] && expande=1 ;;      # "<(" e ">(": idem
-        *) atual+="$c"; mascara+="0"; tem=1 ;;
-      esac
-    fi
+    _tokenizar_contexto
+    case "$aspa" in
+      "'") _tokenizar_aspas_simples ;;
+      A) _tokenizar_ansi ;;
+      '"') _tokenizar_aspas_duplas ;;
+      *) _tokenizar_solto ;;
+    esac
   done
   _tokenizar_fechar                      # guarda a última palavra
-  if [[ -n "$aspa" ]]; then
-    ININTERPRETAVEL=1
-    if [[ "$aspa" == "A" ]]; then MOTIVO="aspas sem fechar (\$')"; else MOTIVO="aspas sem fechar (${aspa})"; fi
-  elif ((expande)); then                 # em aspas simples ou com barra não conta: o shell não executa
-    ININTERPRETAVEL=1
-    MOTIVO="expansão \$(, crase ou <( >(: o que roda só se sabe depois do shell"
-  elif ((obscuro)); then
-    ININTERPRETAVEL=1
-    MOTIVO="escape de \$'...' que o divisor não decodifica (\\x, \\u, octal...)"
-  fi
+  _tokenizar_veredito
 }
 
 # Trata um trecho de palavra achado por separar_redirecionamentos: se um operador está esperando o alvo, o
