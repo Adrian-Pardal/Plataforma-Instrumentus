@@ -88,7 +88,7 @@ PR 1a (divisor):
   de linha, ignorando o que está entre aspas (versão simples) · Cobre: D1 · Teste: divisor.test.sh › separadores (60 min)
 - [x] T2 [infra] — aspas numa só passada: `"a|b"`, `'x;y'`, apóstrofo dentro de aspas duplas, escape `\`; mais
   um comando de alguns KB (desempenho) · Cobre: D1 · Teste: divisor.test.sh › aspas (90 min)
-- [ ] T3 [infra] — `tokenizar_segmento` com `TOK_CITADO`; aspas sem fechar marcam `ININTERPRETAVEL` ·
+- [x] T3 [infra] — `tokenizar_segmento` com `TOK_CITADO`; aspas sem fechar marcam `ININTERPRETAVEL` ·
   Cobre: D1, D4 · Teste: divisor.test.sh › tokens (60 min)
 - [ ] T4 [infra] — `separar_redirecionamentos` com `REDIR_ESCRITA` e `REDIR_LEITURA` (`>`, `>>`, `<`, `<<<`,
   `2>&1`, `&>`, `>|`, colados a palavra e a texto citado), com os casos do ERR-001 e ERR-002 · Cobre: D1 ·
