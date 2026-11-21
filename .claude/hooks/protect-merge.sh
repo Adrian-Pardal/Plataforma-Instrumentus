@@ -134,50 +134,74 @@ analisar_merge() {   # $1 = pasta onde o gh roda; demais = argumentos depois de 
   [[ "$BASE" == "develop" ]] || bloquear "o PR mira '${BASE:-?}'. Só é permitido merge em 'develop'; merge na 'main' é só do dono."
 }
 
-while IFS= read -r SEG; do
-  SEG_ORIGINAL="$SEG"   # texto antes de tirar as aspas: a opção B (ERR-003) procura $, crase e \ aqui
-  # Um texto entre aspas ("texto --squash") é UM argumento: troca os espaços de dentro por \x01, tira as aspas
-  # e põe o marcador \x02 na frente e \x03 no fim (para tirar_redirecionamentos saber o que é texto citado).
-  re_aspas='"[^"]*"|'"'[^']*'"
+# Um texto entre aspas ("texto --squash") é UM argumento: troca os espaços de dentro por \x01, tira as aspas
+# e põe o marcador \x02 na frente e \x03 no fim (para tirar_redirecionamentos saber o que é texto citado).
+marcar_aspas() {   # lê e altera SEG
+  local re_aspas='"[^"]*"|'"'[^']*'" TRECHO NOVO
   while [[ "$SEG" =~ $re_aspas ]]; do
     TRECHO="${BASH_REMATCH[0]}"
     NOVO="${TRECHO:1:${#TRECHO}-2}"; NOVO=$'\x02'"${NOVO//[[:space:]]/$'\x01'}"$'\x03'
     SEG="${SEG/"$TRECHO"/$NOVO}"
   done
+}
+
+# Acha o "gh" no começo do segmento (pulando "VAR=valor"): deixa a posição em i; falha se não for gh.
+achar_gh() {   # lê TOK e altera i
+  i=0
+  while [[ $i -lt ${#TOK[@]} && "${TOK[$i]}" == *=* ]]; do i=$((i+1)); done   # pula "VAR=valor gh ..."
+  [[ "${TOK[$i]:-}" == "gh" || "${TOK[$i]:-}" == */gh ]]
+}
+
+# ERR-003: forma canônica. A palavra "merge" num comando gh só é aceita como "gh pr merge" (os dois tokens
+# logo depois do gh). Uma flag no meio ("gh -R x pr merge", "gh pr -R x merge") esconderia o merge deste hook e do "ask".
+verificar_forma() {   # lê TOK e i
+  local T
+  [[ "${TOK[$((i+1))]:-}" == pr && "${TOK[$((i+2))]:-}" == merge ]] && return 0
+  for T in "${TOK[@]:$((i+1))}"; do
+    [[ "$T" == merge ]] && bloquear "'merge' num comando gh só é aceito como 'gh pr merge ...' (opções como -R vão depois): qualquer outra forma é bloqueada por segurança."
+  done
+}
+
+analisar_alias() {   # lê TOK e i
+  case "${TOK[$((i+2))]:-}" in
+    set | import) bloquear "'gh alias set/import' não é permitido: um alias pode esconder um 'pr merge --squash'." ;;
+  esac
+}
+
+# GH_REPO/GH_HOST no prefixo mudam o repositório do merge; o "gh pr view" consultaria o errado
+verificar_prefixo() {   # lê TOK e i
+  local k
+  for ((k = 0; k < i; k++)); do
+    case "${TOK[$k]}" in
+      GH_REPO=* | GH_HOST=*) bloquear "GH_REPO/GH_HOST antes de 'gh pr merge' não é permitido: o destino do PR seria consultado no repositório errado." ;;
+    esac
+  done
+}
+
+# ERR-003 (opção B): o shell pode expandir $, crase e \ para uma opção proibida; o hook não vê o resultado.
+verificar_expansoes() {   # lê SEG_ORIGINAL
+  case "$SEG_ORIGINAL" in
+    *'$'* | *'`'* | *\\* | *'{'*) bloquear "'gh pr merge' com \$, crase, \\ ou { não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso; para um texto com esses caracteres, use --body-file." ;;
+  esac
+}
+
+while IFS= read -r SEG; do
+  SEG_ORIGINAL="$SEG"   # texto antes de tirar as aspas: a opção B (ERR-003) procura $, crase e \ aqui
+  marcar_aspas
   read -ra TOK <<<"$SEG"
   tirar_redirecionamentos
   [[ ${#TOK[@]} -gt 0 ]] || continue
-
-  i=0
-  while [[ $i -lt ${#TOK[@]} && "${TOK[$i]}" == *=* ]]; do i=$((i+1)); done   # pula "VAR=valor gh ..."
-  [[ "${TOK[$i]:-}" == "gh" || "${TOK[$i]:-}" == */gh ]] || continue
-
-  # ERR-003: forma canônica. A palavra "merge" num comando gh só é aceita como "gh pr merge" (os dois tokens
-  # logo depois do gh). Uma flag no meio ("gh -R x pr merge", "gh pr -R x merge") esconderia o merge deste hook e do "ask".
-  if [[ "${TOK[$((i+1))]:-}" != pr || "${TOK[$((i+2))]:-}" != merge ]]; then
-    for T in "${TOK[@]:$((i+1))}"; do
-      [[ "$T" == merge ]] && bloquear "'merge' num comando gh só é aceito como 'gh pr merge ...' (opções como -R vão depois): qualquer outra forma é bloqueada por segurança."
-    done
-  fi
+  achar_gh || continue
+  verificar_forma
 
   case "${TOK[$((i+1))]:-}" in
-    api) analisar_api "${SEG//[$'\x02\x03']/}" ;;
-    alias) case "${TOK[$((i+2))]:-}" in
-             set | import) bloquear "'gh alias set/import' não é permitido: um alias pode esconder um 'pr merge --squash'." ;;
-           esac ;;
-    pr)  if [[ "${TOK[$((i+2))]:-}" == "merge" ]]; then
-           # GH_REPO/GH_HOST no prefixo mudam o repositório do merge; o "gh pr view" abaixo consultaria o errado
-           for ((k = 0; k < i; k++)); do
-             case "${TOK[$k]}" in
-               GH_REPO=* | GH_HOST=*) bloquear "GH_REPO/GH_HOST antes de 'gh pr merge' não é permitido: o destino do PR seria consultado no repositório errado." ;;
-             esac
-           done
-           # ERR-003 (opção B): o shell pode expandir $, crase e \ para uma opção proibida; o hook não vê o resultado.
-           case "$SEG_ORIGINAL" in
-             *'$'* | *'`'* | *\\* | *'{'*) bloquear "'gh pr merge' com \$, crase, \\ ou { não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso; para um texto com esses caracteres, use --body-file." ;;
-           esac
-           analisar_merge "$CWD" "${TOK[@]:$((i+3))}"
-         fi ;;
+    api)   analisar_api "${SEG//[$'\x02\x03']/}" ;;
+    alias) analisar_alias ;;
+    pr)    if [[ "${TOK[$((i+2))]:-}" == "merge" ]]; then
+             verificar_prefixo
+             verificar_expansoes
+             analisar_merge "$CWD" "${TOK[@]:$((i+3))}"
+           fi ;;
   esac
 done <<<"$CMD"
 
