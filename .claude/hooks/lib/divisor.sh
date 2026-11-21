@@ -64,10 +64,57 @@ dividir_comando() {   # $1 = o texto do comando
   _divisor_fechar                        # guarda o último segmento
 }
 
+# Guarda a palavra que estava sendo montada (se começou alguma) e começa outra.
+# Usa as variáveis "atual", "tem" e "citado" de quem chamou (ver _divisor_fechar).
+_tokenizar_fechar() {
+  if [[ $tem -eq 1 ]]; then
+    TOK+=("$atual")
+    TOK_CITADO+=("$citado")
+  fi
+  atual=""; tem=0; citado=0
+}
+
 # Quebra UM segmento em palavras, como o shell as entregaria ao programa (sem aspas nem barras de proteção).
 # Deixa em TOK as palavras, em TOK_CITADO (1 se a palavra teve aspas ou barra), em ININTERPRETAVEL (1 se há
-# aspa sem fechar) e em MOTIVO (o porquê, ou vazio).
-# T3: esqueleto vazio; o corpo vem na fase verde.
+# aspa sem fechar) e em MOTIVO (o porquê, ou vazio). As palavras se separam em espaço, tab e quebra de linha.
 tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
+  local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
+  local seg="$1" tam="${#1}" i c prox atual="" tem=0 citado=0 aspa=""
   TOK=(); TOK_CITADO=(); ININTERPRETAVEL=0; MOTIVO=""
+  for ((i = 0; i < tam; i++)); do
+    c="${seg:i:1}"
+    prox="${seg:i+1:1}"
+
+    if [[ "$aspa" == "'" ]]; then        # aspas simples: tudo é literal até a aspa que fecha
+      if [[ "$c" == "'" ]]; then aspa=""; else atual+="$c"; fi
+    elif [[ "$aspa" == '"' ]]; then      # aspas duplas: só a barra tem efeito
+      if [[ "$c" == '"' ]]; then
+        aspa=""
+      elif [[ "$c" == $'\\' ]]; then
+        case "$prox" in
+          '"' | $'\\' | '$' | '`') atual+="$prox"; i=$((i + 1)) ;;   # a barra protege só estas 4 letras
+          *) atual+="$c" ;;                                          # em "\b" a barra fica
+        esac
+      else
+        atual+="$c"
+      fi
+    else                                 # fora de aspas
+      case "$c" in
+        "'" | '"') aspa="$c"; tem=1; citado=1 ;;   # abriu aspas (a palavra existe, mesmo vazia: "")
+        $'\\')
+          if [[ "$prox" == $'\n' ]]; then
+            i=$((i + 1))                           # barra + quebra de linha: continuação, some
+          else
+            atual+="$prox"; tem=1; citado=1; i=$((i + 1))   # a barra protege a letra seguinte
+          fi ;;
+        ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
+        *) atual+="$c"; tem=1 ;;
+      esac
+    fi
+  done
+  _tokenizar_fechar                      # guarda a última palavra
+  if [[ -n "$aspa" ]]; then
+    ININTERPRETAVEL=1
+    MOTIVO="aspas sem fechar (${aspa})"
+  fi
 }
