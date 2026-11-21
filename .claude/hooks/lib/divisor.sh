@@ -80,7 +80,7 @@ _tokenizar_fechar() {
 tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
   local seg="$1" tam="${#1}" i c prox atual="" tem=0 citado=0 aspa=""
-  TOK=(); TOK_CITADO=(); ININTERPRETAVEL=0; MOTIVO=""
+  TOK=(); TOK_CITADO=(); TOK_MASCARA=(); ININTERPRETAVEL=0; MOTIVO=""
   for ((i = 0; i < tam; i++)); do
     c="${seg:i:1}"
     prox="${seg:i+1:1}"
@@ -117,4 +117,12 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
     ININTERPRETAVEL=1
     MOTIVO="aspas sem fechar (${aspa})"
   fi
+}
+
+# Tira de TOK os redirecionamentos (>, >>, >|, &>, >&, <, <<, <<<, 2>&1...) e os alvos deles.
+# Deixa em REDIR_ESCRITA os arquivos em que se escreve e em REDIR_LEITURA os que se leem. Só conta o operador
+# escrito solto: um ">" dentro de aspas ou protegido por barra (máscara 1 em TOK_MASCARA) é texto.
+# T4: esqueleto vazio; o corpo vem na fase verde.
+separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que tokenizar_segmento deixou)
+  REDIR_ESCRITA=(); REDIR_LEITURA=()
 }

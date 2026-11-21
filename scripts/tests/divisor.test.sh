@@ -132,5 +132,91 @@ caso_tokens "aspas simples sem fechar"        "echo 'abc"                '[echo]
 tokenizar_segmento 'echo "abc'
 caso_tokens "o estado não vaza (volta a interpretável)" 'echo ok'        '[echo][ok]'              '0,0'
 
+caso_mascara() {   # caso_mascara <descrição> <segmento> <máscaras, cada uma entre colchetes>
+  local descricao="$1" seg="$2" esperado="$3" obtido="" m
+  tokenizar_segmento "$seg"
+  for m in "${TOK_MASCARA[@]}"; do obtido+="[$m]"; done
+  if [[ "$obtido" == "$esperado" ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado '$esperado', veio '$obtido'" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ máscara: 1 = letra que veio de aspas ou barra, 0 = letra escrita solta"
+caso_mascara "palavras soltas"                   'ls -la'            '[00][000]'
+caso_mascara "aspas duplas"                      'echo "a b"'        '[0000][111]'
+caso_mascara "aspas coladas na palavra"          'a"b"c'             '[010]'
+caso_mascara "opção entre aspas colada a um >"   "gh '--squash'>x"   '[00][1111111100]'
+caso_mascara "barra protege o >"                 'echo a\>b'         '[0000][010]'
+caso_mascara "aspas vazias"                      'echo ""'           '[0000][]'
+caso_mascara "barra dentro de aspas duplas"      'echo "a\"b"'       '[0000][111]'
+
+caso_redir() {   # caso_redir <descrição> <segmento> <palavras> <escrita> <leitura> [ininterpretável: 0|1]
+  local descricao="$1" seg="$2" esp_tok="$3" esp_esc="$4" esp_lei="$5" esp_int="${6:-0}" tok="" esc="" lei="" t alinhado=1
+  tokenizar_segmento "$seg"
+  separar_redirecionamentos
+  for t in "${TOK[@]}"; do tok+="[$t]"; done
+  for t in "${REDIR_ESCRITA[@]}"; do esc+="[$t]"; done
+  for t in "${REDIR_LEITURA[@]}"; do lei+="[$t]"; done
+  [[ ${#TOK[@]} -eq ${#TOK_CITADO[@]} && ${#TOK[@]} -eq ${#TOK_MASCARA[@]} ]] || alinhado=0
+  if [[ "$tok" == "$esp_tok" && "$esc" == "$esp_esc" && "$lei" == "$esp_lei" && "$ININTERPRETAVEL" == "$esp_int" && $alinhado -eq 1 ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado palavras='$esp_tok' escrita='$esp_esc' leitura='$esp_lei' interpretável=$esp_int," \
+      "veio palavras='$tok' escrita='$esc' leitura='$lei' ininterpretável=$ININTERPRETAVEL alinhado=$alinhado" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ redirecionamentos: saída"
+caso_redir "> separado"                  'ls > out'              '[ls]'      '[out]'      ''
+caso_redir "> colado ao alvo"            'ls >out'               '[ls]'      '[out]'      ''
+caso_redir "> colado à palavra"          'ls>out'                '[ls]'      '[out]'      ''
+caso_redir ">>"                          'ls >> log'             '[ls]'      '[log]'      ''
+caso_redir "2>&1 não tem alvo"           'ls 2>&1'               '[ls]'      ''           ''
+caso_redir "> e depois 2>&1"             'ls > /tmp/log 2>&1'    '[ls]'      '[/tmp/log]' ''
+caso_redir "&>"                          'ls &> out'             '[ls]'      '[out]'      ''
+caso_redir "&>>"                         'ls &>> out'            '[ls]'      '[out]'      ''
+caso_redir ">& com arquivo"              'ls >& out'             '[ls]'      '[out]'      ''
+caso_redir ">&2 não tem alvo"            'ls >&2'                '[ls]'      ''           ''
+caso_redir ">|"                          'echo x >| f'           '[echo][x]' '[f]'        ''
+caso_redir "2> com espaço"               'ls 2> err'             '[ls]'      '[err]'      ''
+caso_redir "2> colado"                   'ls 2>err'              '[ls]'      '[err]'      ''
+caso_redir "dois >"                      'ls > a > b'            '[ls]'      '[a][b]'     ''
+caso_redir "redirecionamento no começo"  '> out ls'              '[ls]'      '[out]'      ''
+caso_redir "2 solto é uma palavra"       'ls 2 > out'            '[ls][2]'   '[out]'      ''
+
+echo "▶ redirecionamentos: entrada"
+caso_redir "<"                           'cat < in'              '[cat]'     ''           '[in]'
+caso_redir "< colado"                    'cat <in'               '[cat]'     ''           '[in]'
+caso_redir "< e >"                       'cat < in > out'        '[cat]'     '[out]'      '[in]'
+caso_redir "<<< (here-string) não é arquivo" 'cat <<< x'         '[cat]'     ''           ''
+caso_redir "<< (heredoc) não é arquivo"  'cat << EOF'            '[cat]'     ''           ''
+
+echo "▶ redirecionamentos: o que é texto, não operador"
+caso_redir "> dentro de aspas"           'echo "a > b"'          '[echo][a > b]' ''       ''
+caso_redir '">" é só texto'              'echo ">"'              '[echo][>]' ''           ''
+caso_redir "\> protegido por barra"      'echo a\>b'             '[echo][a>b]' ''         ''
+caso_redir "alvo entre aspas"            'ls > "a b"'            '[ls]'      '[a b]'      ''
+caso_redir "alvo com aspas coladas"      'ls >"a b"c'            '[ls]'      '[a bc]'     ''
+caso_redir "dígito entre aspas não é descritor" 'echo "2">x'     '[echo][2]' '[x]'        ''
+
+echo "▶ redirecionamentos: os casos do ERR-001 e ERR-002 (opção proibida colada a um operador)"
+caso_redir "opção colada ao >"           'gh pr merge 1 --merge --squash>x'      '[gh][pr][merge][1][--merge][--squash]' '[x]' ''
+caso_redir "opção entre aspas colada ao >" "gh pr merge 1 --merge '--squash'>x"  '[gh][pr][merge][1][--merge][--squash]' '[x]' ''
+caso_redir "opção entre aspas e 2>&1"    'gh pr merge 1 --merge "--admin" 2>&1'  '[gh][pr][merge][1][--merge][--admin]'  ''    ''
+caso_redir "--admin2 não é opção (2 colado à palavra)" 'gh pr merge 1 --merge "--admin"2>&1' '[gh][pr][merge][1][--merge][--admin2]' '' ''
+caso_redir "número entre aspas colado ao >" 'gh pr merge 1 --merge "12">x'       '[gh][pr][merge][1][--merge][12]'      '[x]' ''
+caso_redir "--body \">\" não é redirecionamento" 'gh pr merge 1 --merge --body ">" --squash' '[gh][pr][merge][1][--merge][--body][>][--squash]' '' ''
+caso_redir "opção entre aspas colada ao <" 'gh pr merge 1 --merge "--squash"<x'  '[gh][pr][merge][1][--merge][--squash]' ''    '[x]'
+caso_redir ">| separado"                 'gh pr merge 7 --merge >| x --squash'   '[gh][pr][merge][7][--merge][--squash]' '[x]' ''
+caso_redir "2>| colado"                  'gh pr merge 7 --merge 2>|x --admin'    '[gh][pr][merge][7][--merge][--admin]'  '[x]' ''
+caso_redir "opção colada ao &>"          'gh pr merge 7 --merge --squash&>x'     '[gh][pr][merge][7][--merge][--squash]' '[x]' ''
+
+echo "▶ redirecionamentos: erro de sintaxe"
+caso_redir "operador sem alvo"           'echo x >'              '[echo][x]' ''           ''  1
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
