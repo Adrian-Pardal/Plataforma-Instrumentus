@@ -1,0 +1,39 @@
+name: Ambiente
+description: Problema de ferramenta, versão, sistema ou configuração (máquina local ou CI)
+title: "[ambiente] "
+labels: ["ambiente"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Para o que quebra por causa da máquina, de uma ferramenta ou da configuração, não do código do produto.
+  - type: textarea
+    id: o-que-aconteceu
+    attributes:
+      label: O que aconteceu
+    validations:
+      required: true
+  - type: textarea
+    id: ambiente
+    attributes:
+      label: Ambiente
+      description: Sistema, versão da ferramenta e onde rodou (local ou CI).
+      placeholder: |
+        WSL2 Ubuntu 24.04, gh 2.103.2, bash 5.2
+    validations:
+      required: true
+  - type: textarea
+    id: comando-e-saida
+    attributes:
+      label: Comando e saída
+    validations:
+      required: true
+  - type: dropdown
+    id: detectado-em
+    attributes:
+      label: Detectado em
+      options:
+        - local
+        - ci
+    validations:
+      required: true

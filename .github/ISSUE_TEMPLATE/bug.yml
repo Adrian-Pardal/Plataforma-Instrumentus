@@ -1,0 +1,49 @@
+name: Bug
+description: Algo do produto ou do código não funciona como esperado
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Descreva só o que se viu. A causa raiz e a correção entram depois, no registro `ERR-NNN`
+        (`docs/erros/`, skill `/registrar-erro`).
+  - type: textarea
+    id: sintoma
+    attributes:
+      label: Sintoma
+      description: O que se viu de errado (mensagem, comportamento), sem interpretar.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduzir
+    attributes:
+      label: Como reproduzir
+      description: Passos mínimos, na ordem.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: severidade
+    attributes:
+      label: Severidade
+      options:
+        - baixa
+        - media
+        - alta
+        - critica
+    validations:
+      required: true
+  - type: dropdown
+    id: detectado-em
+    attributes:
+      label: Detectado em
+      options:
+        - local
+        - ci
+        - revisao
+        - producao
+    validations:
+      required: true
