@@ -7,16 +7,15 @@
 # Limitação: é análise estática do TEXTO do comando. Só olha segmentos que COMEÇAM com "gh" (ou "VAR=x gh"):
 # "env gh", "command gh", "xargs gh", "sh -c" e subshell passam. Corta o comando em |, ;, && e || antes de
 # olhar as aspas e pareia aspas de tipos diferentes como o regex achar ("it's" --squash "x's" esconde o
-# --squash); uma quebra de linha dentro de aspas e um glob (--s*) também escapam, e também um "&" solto
-# ("gh pr view 1 & gh api ...") e uma flag antes de "api" ou "alias" ("gh --paginate=true api ..."). Tudo isso é
-# aceito como limitação (ERR-003, opção C); a correção de verdade é a opção A, um divisor de comandos próprio, com ADR. O destino do PR é consultado na pasta da sessão: "cd outra-pasta && gh pr merge"
-# e um GH_REPO exportado em outro segmento também não são vistos, nem um alias que já exista ou uma config
-# apontada por GH_CONFIG_DIR/XDG_CONFIG_HOME. Bloqueados (opção B): $, crase, \ e { em 'gh pr merge' (o shell os
-# expandiria sem o hook ver); "merge" num comando gh fora da forma "gh pr merge" (flag entre os termos; falso
-# bloqueio aceito: "gh pr view merge"); GH_REPO/GH_HOST no prefixo; "gh alias set/import". O "ask" do
-# settings.json (documentação oficial do Claude Code) separa comandos compostos, vê subshell e remove "command" e
-# "xargs" sem flags: cobre "cd x && gh pr merge" e "command gh pr merge", mas não "sh -c", "xargs" com flags,
-# "gh -R x pr merge" nem "gh api"/"gh alias" (env gh: não confirmado).
+# --squash). Também escapam: quebra de linha dentro de aspas; glob (--s*); "&" solto e "|&" ("gh pr view 1 &
+# gh api ..."); flag antes de "api" ou "alias" ("gh --paginate=true api ..."); "gh api" com caminho ou query
+# montados por expansão, --input ou @arquivo; "cd outra-pasta && gh pr merge" (o destino do PR é consultado
+# na pasta da sessão); GH_REPO exportado em outro segmento; alias que já exista; config apontada por
+# GH_CONFIG_DIR/XDG_CONFIG_HOME. Tudo isso é aceito como limitação (ERR-003, opção C); a correção de verdade
+# é a opção A, um divisor de comandos próprio (ERR-003, DEBT-002). Bloqueados (opção B): $, crase, \ e { em
+# 'gh pr merge' (o shell os expandiria sem o hook ver); "merge" num comando gh fora da forma "gh pr merge"
+# (falso bloqueio aceito: "gh pr view merge"); GH_REPO/GH_HOST no prefixo; "gh alias set/import".
+# O que o "ask" do settings.json cobre e não cobre: ver docs/help/ferramentas/merge-de-pr.md.
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
 bloquear() { echo "🚫 protect-merge: $1" >&2; exit 2; }

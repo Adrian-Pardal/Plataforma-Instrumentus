@@ -27,14 +27,18 @@ Três travas sustentam a regra:
    `xargs gh`, `sh -c "gh ..."` e subshell não são vistos. Também escapam `|`, `;`, `&&` ou `||` dentro de
    aspas, apóstrofos em duas citações do mesmo comando, glob, quebra de linha dentro de aspas, `cd` para outra
    pasta, `GH_REPO` exportado em outro segmento, alias que já exista e config apontada por `GH_CONFIG_DIR` ou
-   `XDG_CONFIG_HOME`, `&` solto (`gh pr view 1 & gh api ...`) e flag antes de `api` ou `alias`
-   (`gh --paginate=true api ...`) (ERR-003, limitação aceita; a correção definitiva é a opção A, em PR próprio). O `ask` (trava 2) separa
-   comandos compostos (`&&`, `||`, `;`, `|`, `&`, quebra de linha), vê subshell e `$(...)` e remove `command` e
-   `xargs` sem flags; por isso **cobre** `cd x && gh pr merge`, `(gh pr merge ...)` e `command gh pr merge`. **Não
-   cobre** `sh -c "gh pr merge ..."`, `xargs` com flags, `gh -R x pr merge` (o hook bloqueia) nem `gh api` e
-   `gh alias`; para `env gh`, a documentação não confirma. Nos casos não cobertos, a única barreira é você ler o
-   comando antes de aprovar. Fonte: https://code.claude.com/docs/en/permissions (consultada em 2026-11-20); o
-   comportamento depende da versão do Claude Code.
+   `XDG_CONFIG_HOME`, `&` solto e `|&` (`gh pr view 1 & gh api ...`), flag antes de `api` ou `alias`
+   (`gh --paginate=true api ...`) e `gh api` com caminho ou query montados por expansão, `--input` ou `@arquivo`
+   (ERR-003, limitação aceita; a correção definitiva é a opção A, em PR próprio).
+
+   **O que o `ask` (trava 2) cobre e não cobre** (esta é a única fonte; os outros documentos apontam para cá).
+   Ele separa comandos compostos (`&&`, `||`, `;`, `|`, `|&`, `&`, quebra de linha), vê subshell e `$(...)` e
+   remove os wrappers `command`, `timeout`, `time`, `nice`, `nohup`, `stdbuf` e `xargs` sem flags; por isso
+   **cobre** `cd x && gh pr merge`, `(gh pr merge ...)` e `command gh pr merge`. **Não cobre** `sh -c "gh pr
+   merge ..."`, `xargs` com flags, `gh -R x pr merge` (o hook bloqueia) nem `gh api` e `gh alias`. `env` não está
+   na lista de wrappers removidos: trate `env gh ...` como não coberto. Nos casos não cobertos, a única barreira é
+   você ler o comando antes de aprovar. Fonte: https://code.claude.com/docs/en/permissions (consultada em
+   2026-11-20); o comportamento depende da versão do Claude Code.
 
 ## QUANDO FAZER
 Sempre que quiser que o Claude integre um PR na `develop`. Você precisa
@@ -45,7 +49,7 @@ pedir; ele não faz sozinho.
 - O PR mira a `develop`, o CI está verde e a `/revisar` não tem 🔴/🟡.
 - Recomendado: branch protection da `main` ativa no GitHub (PR obrigatório,
   CI exigido). É ela a garantia real; o hook analisa texto e não pega tudo
-  (por exemplo, comando montado por variável ou `gh api -F query=@arquivo`).
+  (a lista do que ele não vê está acima).
 
 ## PASSO A PASSO
 1. Confira o PR e o CI.
