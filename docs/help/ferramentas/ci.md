@@ -1,12 +1,12 @@
 # NOME
 ci — o que o CI do GitHub Actions faz, como ler uma falha e como atualizar as actions
 
-Última verificação: 2026-10-28 · Testado com: actionlint 1.7.12, gh 2.103.2
+Última verificação: 2026-11-21 · Testado com: actionlint 1.7.12, gh 2.103.2
 
 ## PARA QUE SERVE
 O arquivo `.github/workflows/ci.yml` roda em todo pull request e em todo
-push na `main` e na `develop`. Ele tem dois jobs, e o nome de cada check no
-GitHub é o próprio nome do job:
+push na `main` e na `develop`. Ele tem dois jobs de verificação (mais um que só
+roda na falha da `main`), e o nome de cada check no GitHub é o próprio nome do job:
 
 - **`seguranca`** (roda primeiro): o gitleaks varre todos os commits em busca
   de segredos; em PR, o dependency review reprova se o PR trouxer uma
@@ -15,6 +15,9 @@ GitHub é o próprio nome do job:
   somente se existirem `pom.xml` e `package.json`, instala `shellcheck` e
   `actionlint` e roda `scripts/verify.sh full`. Qualquer teste falhando ou
   desativado sem `DEBT-NNN` reprova.
+- **`registrar-falha`** (só em push na `main` e só se um job acima falhar): abre a
+  issue "CI falhou na main" com o link do log, sem duplicar. Detalhes e a etiqueta
+  `incidente` (que precisa existir) estão em `registro-de-erros.md`.
 
 Regras do arquivo: permissões mínimas por job (`contents: read`), actions de
 terceiros fixadas pelo SHA completo (a versão fica no comentário) e um
@@ -91,6 +94,7 @@ actions (commit `chore(deps): ...`). Maven e npm estão comentados.
 - **Voltar atrás numa mudança do workflow:** `git revert <commit>` em um PR.
 
 ## VER TAMBÉM
+- `docs/help/ferramentas/registro-de-erros.md`
 - `docs/help/ferramentas/protecao-de-branches.md`
 - `docs/help/ferramentas/merge-de-pr.md`
 - `docs/help/ferramentas/instaladas.md`

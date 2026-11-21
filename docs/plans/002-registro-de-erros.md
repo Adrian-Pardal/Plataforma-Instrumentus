@@ -42,7 +42,7 @@ permissões `contents: read` e `issues: write`.
 - [x] T4 [infra] — job `registrar-falha` no `ci.yml` · Cobre: pedido 4 · Teste: actionlint + abrir-issue-ci.test.sh (30 min)
 - [x] T5 [infra] — frase no CLAUDE.md (§6) e uma linha na skill `registrar-erro` (campo `issue`) · Cobre: pedidos
   3 e 5 · Teste: leitura (15 min)
-- [ ] T6 [infra] — página `docs/help/ferramentas/registro-de-erros.md` (etiquetas, modelos, issue de CI),
+- [x] T6 [infra] — página `docs/help/ferramentas/registro-de-erros.md` (etiquetas, modelos, issue de CI),
   atualizar `ci.md` e o índice do help · Cobre: pedidos 2 e 4 · Teste: leitura (30 min)
 
 ## Rastreabilidade
