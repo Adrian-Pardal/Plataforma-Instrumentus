@@ -484,5 +484,52 @@ caso_sub "then e git push"                   'then git push origin main'        
 caso_sub "nohup nice git -C"                 'nohup nice git -C /x push'         'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/x] DIR=/x ENV='
 caso_sub "--force) sem o parêntese"          'git push origin feat/a --force)'   'PROG=git SUB=push SUB2= ARGS=[origin][feat/a][--force] FLAGS= DIR= ENV='
 
+echo "▶ falha fechada (T7d): o subcomando que não é um nome simples bloqueia"
+caso_falha_fechada "subcomando é \"\$(echo push)\""      $'git "$(echo push)" origin main'          bloquear
+caso_falha_fechada "subcomando é \$(echo push)"          $'git $(echo push) origin main'            bloquear
+caso_falha_fechada "subcomando em chaves {push,}"        'git {push,} origin main'                  bloquear
+caso_falha_fechada "subcomando p{u,}sh"                  'git p{u,}sh origin main'                  bloquear
+caso_falha_fechada "2º nível é uma expansão"             $'gh pr $(echo mer)ge 1 --squash'          bloquear
+caso_falha_fechada "1º nível é uma expansão"             $'gh "$(echo pr)" merge 1'                 bloquear
+caso_falha_fechada "subcomando normal com hífen libera"  'git hash-object x'                        liberar
+
+echo "▶ falha fechada (T7d): expansão com ação protegida em qualquer posição bloqueia"
+caso_falha_fechada "echo com \$(git push)"               $'echo "$(git push origin main)"'          bloquear
+caso_falha_fechada "echo com \$(git push) solto"         $'echo $(git push origin main)'            bloquear
+caso_falha_fechada "git commit -m com \$(git push)"      $'git commit -m "$(git push origin main)"' bloquear
+caso_falha_fechada "ls com \$(git push)"                 $'ls $(git push)'                          bloquear
+caso_falha_fechada "crase com git push"                  $'echo "`git push origin main`"'           bloquear
+caso_falha_fechada "<( com git push"                     $'cat <(git push origin main)'             bloquear
+caso_falha_fechada "aspas aninhadas dentro de \$()"      $'echo "$(echo "x"; git push origin main)"' bloquear
+caso_falha_fechada "git ... -C dir ... push dentro de \$()" $'echo "$(git -C /x push)"'             bloquear
+caso_falha_fechada "gh ... pr ... merge dentro de \$()"  $'echo "$(gh pr merge 1 --squash)"'        bloquear
+caso_falha_fechada "palavra montada com aspas colada nos tokens" $'$(echo env) "g"it push origin main' bloquear
+
+echo "▶ falha fechada (T7d): o que continua liberado (uso comum do Claude)"
+caso_falha_fechada "VAR=\$(git branch ...)"             $'BRANCH=$(git branch --show-current)'     liberar
+caso_falha_fechada "\$(git rev-parse ...)/script"        $'$(git rev-parse --show-toplevel)/scripts/verify.sh test' liberar
+caso_falha_fechada "xargs -0 git add"                    'xargs -0 git add'                         liberar
+caso_falha_fechada "git commit com \$(date)"             $'git commit -m "$(date)"'                 liberar
+caso_falha_fechada "diff <(git show ...)"                $'diff <(git show a:f) b'                  liberar
+caso_falha_fechada "cat <(ls)"                           'cat <(ls)'                                liberar
+caso_falha_fechada "watch sem ação protegida"            'watch git status'                         liberar
+
+caso_falha_fechada_sem() {   # caso_falha_fechada_sem <descrição> <segmento> <vazia|ausente> (esperado: bloquear)
+  local descricao="$1" seg="$2" modo="$3" obtido
+  # shellcheck disable=SC2034  # PROTEGIDOS é lida por falha_fechada, em divisor.sh
+  if [[ "$modo" == vazia ]]; then PROTEGIDOS=(); else unset PROTEGIDOS; fi
+  analisar_segmento "$seg"
+  if falha_fechada; then obtido=bloquear; else obtido=liberar; fi
+  if [[ "$obtido" == bloquear ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado bloquear, veio $obtido" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+echo "▶ falha fechada (T7d): PROTEGIDOS vazia ou ausente bloqueia o que é ininterpretável"
+caso_falha_fechada_sem "PROTEGIDOS vazia"                $'git commit -m "$(date)"'                 vazia
+caso_falha_fechada_sem "PROTEGIDOS ausente"              $'echo "$(date)"'                          ausente
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
