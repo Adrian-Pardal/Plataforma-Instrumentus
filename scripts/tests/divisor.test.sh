@@ -312,7 +312,11 @@ caso_wrap "wrapper sozinho"                  'env'                        ''    
 caso_wrap "comando sem wrapper"              'ls -la'                     '[ls][-la]'               ''
 caso_wrap "env como argumento"               'echo env gh'                '[echo][env][gh]'         ''
 
+caso_wrap "env -S entrega o comando numa palavra só: não suportado" 'env -S "gh pr merge 1"' '[env][-S][gh pr merge 1]' '' 'env'
+
 echo "▶ wrappers: grupos de comandos"
+caso_wrap "subshell aninhado"                '( ( gh pr merge 1 ) )'      '[gh][pr][merge][1]'      '[(][(]'
+caso_wrap "dois ( colados"                   '((gh pr merge 1))'          '[gh][pr][merge][1]'      '[(][(]'
 caso_wrap "subshell colado"                  '(gh pr merge 1)'            '[gh][pr][merge][1]'      '[(]'
 caso_wrap "subshell com espaços"             '( gh pr merge 1 )'          '[gh][pr][merge][1]'      '[(]'
 caso_wrap "chaves"                           '{ gh pr merge 1'            '[gh][pr][merge][1]'      '[{]'
