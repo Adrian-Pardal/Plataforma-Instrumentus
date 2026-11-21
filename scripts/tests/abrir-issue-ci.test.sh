@@ -58,5 +58,16 @@ else
   falhas=$((falhas + 1))
 fi
 
+echo "▶ abrir-issue-ci: a consulta olha só issues abertas, com a etiqueta"
+: > "$FALSO/chamadas.log"
+RUN_URL="$URL" SHA=abc123 PATH="$FALSO:$PATH" "$SCRIPT" >/dev/null 2>&1
+lista=$(grep '^issue list' "$FALSO/chamadas.log")
+if grep -q -- '--state open' <<<"$lista" && grep -q -- '--label incidente' <<<"$lista"; then
+  echo "  ok    issue list com --state open e --label incidente"
+else
+  echo "  FALHA a consulta não filtra por issues abertas e pela etiqueta incidente" >&2
+  falhas=$((falhas + 1))
+fi
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
