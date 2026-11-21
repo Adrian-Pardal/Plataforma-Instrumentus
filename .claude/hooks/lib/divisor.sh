@@ -488,19 +488,33 @@ analisar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
 # ("git commit -m \"$(...)\"" passa; "git push \"$(...)\"" não). Se o programa não se acha (a primeira palavra é uma
 # expansão, ou o wrapper não abre), bloqueia quando o texto cru cita gh ou git.
 falha_fechada() {
-  local acao p primeira re='(^|[^[:alnum:]_])(gh|git)([^[:alnum:]_]|$)'
-  [[ "$ININTERPRETAVEL" == 1 || -n "$WRAPPER_NAO_SUPORTADO" ]] || return 1
+  local simples='^[a-z][a-z0-9-]*$'
+  # O subcomando tem de ser um nome simples: "git $(echo push)", "git {push,}" e "gh pr $(echo mer)ge" escondem a ação.
   if [[ -n "$PROG" ]]; then
-    acao="$PROG $SUB"; [[ -n "$SUB2" ]] && acao+=" $SUB2"
-    for p in "${PROTEGIDOS[@]}"; do
-      [[ "$acao" == "$p" || "$acao" == "$p "* ]] && return 0
-    done
-    return 1
+    [[ -z "$SUB" || "$SUB" =~ $simples ]] || return 0
+    [[ -z "$SUB2" || "$SUB2" =~ $simples ]] || return 0
   fi
-  primeira="${SEGMENTO_CRU%%[[:space:]]*}"
-  if [[ -n "$WRAPPER_NAO_SUPORTADO" || "$primeira" == *$'$('* || "$primeira" == *'`'* ]]; then
-    [[ "$SEGMENTO_CRU" =~ $re ]] && return 0
-  fi
+  [[ "$ININTERPRETAVEL" == 1 || -n "$WRAPPER_NAO_SUPORTADO" ]] || return 1
+  ((${#PROTEGIDOS[@]} > 0)) || return 0                   # sem lista de ações protegidas não há como decidir: bloqueia
+  # Ininterpretável (aspa aberta, $( crase <( >() ou wrapper que não abrimos: bloqueia se o texto MOSTRA uma ação
+  # protegida em qualquer posição (dentro de $(...), de aspas, depois de um wrapper...). O texto cru e as palavras
+  # tokenizadas entram os dois: "g"it push só aparece como "git push" nas palavras.
+  _falha_mostra_acao_protegida "$SEGMENTO_CRU ${TOK[*]}"
+}
+
+# Devolve 0 se o texto contém alguma ação de PROTEGIDOS com as palavras na ordem e inteiras, com qualquer coisa entre
+# elas: "git push" casa em "git -C /x push" e em "$(echo git) push", mas não em "legit pushes". Falsos positivos: um
+# texto que apenas cita "git ... push" (a opção A do plano aceita isso). Usa PROTEGIDOS de quem chamou.
+_falha_mostra_acao_protegida() {   # $1 = o texto
+  local a b="[^[:alnum:]_]" re w
+  local -a palavras
+  for a in "${PROTEGIDOS[@]}"; do
+    read -ra palavras <<<"$a"
+    re="(^|$b)${palavras[0]}"
+    for w in "${palavras[@]:1}"; do re+="($b|$b.*$b)$w"; done
+    re+="($b|\$)"
+    [[ "$1" =~ $re ]] && return 0
+  done
   return 1
 }
 
