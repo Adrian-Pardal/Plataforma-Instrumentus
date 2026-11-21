@@ -90,7 +90,7 @@ PR 1a (divisor):
   um comando de alguns KB (desempenho) · Cobre: D1 · Teste: divisor.test.sh › aspas (90 min)
 - [x] T3 [infra] — `tokenizar_segmento` com `TOK_CITADO`; aspas sem fechar marcam `ININTERPRETAVEL` ·
   Cobre: D1, D4 · Teste: divisor.test.sh › tokens (60 min)
-- [ ] T4 [infra] — `separar_redirecionamentos` com `REDIR_ESCRITA` e `REDIR_LEITURA` (`>`, `>>`, `<`, `<<<`,
+- [x] T4 [infra] — `separar_redirecionamentos` com `REDIR_ESCRITA` e `REDIR_LEITURA` (`>`, `>>`, `<`, `<<<`,
   `2>&1`, `&>`, `>|`, colados a palavra e a texto citado), com os casos do ERR-001 e ERR-002 · Cobre: D1 ·
   Teste: divisor.test.sh › redirecionamentos (90 min)
 - [ ] T5 [infra] — `achar_subcomando` para `gh` e `git`, com `DIR_GIT` e a tabela de flags acima; testes
