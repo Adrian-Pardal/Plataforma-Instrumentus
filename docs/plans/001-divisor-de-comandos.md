@@ -117,7 +117,7 @@ PR 1a (divisor):
   `nice -n N`, `stdbuf`, `ionice`, `setsid`, `noglob` e `--` em `command`/`time`; `eval`, `watch`, `find -exec`, `coproc` e
   `parallel` vão para WRAPPER_NAO_SUPORTADO; `env` com `S` em qualquer opção curta (`-iS`); `(` e `)` aparados dos argumentos
   (`--force)`) · Cobre: D3 · Teste: divisor.test.sh › wrappers (90 min)
-- [ ] T7d [infra] — falha fechada: `SUB` ou `SUB2` que não é um nome simples (`$(echo push)`, `{push,}`) bloqueia; `PROTEGIDOS`
+- [x] T7d [infra] — falha fechada: `SUB` ou `SUB2` que não é um nome simples (`$(echo push)`, `{push,}`) bloqueia; `PROTEGIDOS`
   vazio ou indefinido bloqueia; a regex da 1ª palavra roda também sobre os tokens; `VAR=$(...)` no começo não conta como
   "primeira palavra"; opção A do `$(...)` (Decisões) · Cobre: D4 · Teste: divisor.test.sh › falha fechada (90 min)
 - [ ] T7e [infra] — desempenho: `dividir_comando`, `tokenizar_segmento` e `separar_redirecionamentos` lineares; teste com UM
