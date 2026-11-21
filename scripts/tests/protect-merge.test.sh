@@ -132,6 +132,15 @@ caso 0 develop 'gh -R o/r pr view 1'
 caso 0 develop 'gh --version'
 caso 0 develop 'gh alias list'
 caso 0 develop 'FOO=1 gh pr merge 12 --merge'
+# 6ª revisão: a flag entre "pr" e "merge" escapava da regra que só olhava logo depois do "gh"
+caso 2 develop 'gh pr -R x merge 12 --squash'
+caso 2 develop 'gh pr --repo x merge 12 --admin'
+caso 2 develop 'gh pr -R x merge 12 --merge'
+# Falso bloqueio aceito: "merge" num comando gh fora da forma "gh pr merge"
+caso 2 develop 'gh pr view merge'
+# Guardas
+caso 0 develop 'gh pr -R x view 12'
+caso 0 develop 'gh pr merge 12 --merge -R o/r'
 
 echo "▶ protect-merge: destino errado ou consulta falhou (2)"
 caso 2 main    'gh pr merge 12 --merge'
