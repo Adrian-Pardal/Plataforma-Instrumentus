@@ -120,7 +120,7 @@ PR 1a (divisor):
 - [x] T7d [infra] — falha fechada: `SUB` ou `SUB2` que não é um nome simples (`$(echo push)`, `{push,}`) bloqueia; `PROTEGIDOS`
   vazio ou indefinido bloqueia; a regex da 1ª palavra roda também sobre os tokens; `VAR=$(...)` no começo não conta como
   "primeira palavra"; opção A do `$(...)` (Decisões) · Cobre: D4 · Teste: divisor.test.sh › falha fechada (90 min)
-- [ ] T7e [infra] — desempenho: `dividir_comando`, `tokenizar_segmento` e `separar_redirecionamentos` lineares; teste com UM
+- [x] T7e [infra] — desempenho: `dividir_comando`, `tokenizar_segmento` e `separar_redirecionamentos` lineares; teste com UM
   segmento entre aspas de 20 KB pelo pipeline inteiro, com limite · Cobre: D1 (risco de desempenho) ·
   Teste: divisor.test.sh › desempenho (90 min)
 - [ ] T7f [infra] — refatoração: dividir `dividir_comando`, `tokenizar_segmento`, `separar_redirecionamentos` e `desembrulhar`
