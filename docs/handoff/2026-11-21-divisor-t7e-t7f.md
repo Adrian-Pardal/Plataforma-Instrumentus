@@ -2,9 +2,10 @@
 
 ## Onde estamos
 Feature: divisor de comandos compartilhado para os hooks (ADR 0005, plano
-`docs/plans/001-divisor-de-comandos.md`). Fase: implementação do PR 1a (só o `divisor.sh`; nenhum hook o usa
-ainda) TERMINADA; falta a nova `/revisar`. Branch `feat/divisor-de-comandos`, em sincronia com `origin`
-(commits sem push: nenhum; último commit d0b2836). PR 1a NÃO aberto. Árvore limpa.
+`docs/plans/001-divisor-de-comandos.md`). PR 1a (só o `divisor.sh`; nenhum hook o usa ainda) MERGEADO na
+`develop` em 2026-11-21 16:28 UTC (PR #13, commit de merge 1138efb, `gh pr merge --merge`). CI verde
+(`seguranca` e `verificar`). Entrou SEM `/revisar` desta versão, por decisão do dono (registrado no corpo do
+PR). A branch `feat/divisor-de-comandos` não foi apagada (local nem remota). Falta o PR 1b.
 
 ## Feito (T7e e T7f; plano marcado até a T7f)
 - T7e (desempenho): o custo quadrático era `${s:i:1}` (O(n) por chamada, mesmo em locale C). Criado
@@ -25,9 +26,11 @@ ainda) TERMINADA; falta a nova `/revisar`. Branch `feat/divisor-de-comandos`, em
 Nada pela metade.
 
 ## Próximo passo
-Rodar `scripts/verify.sh test` e `git status` antes de agir (o estado abaixo vale às 11:56). Depois,
-o dono roda a nova `/revisar` da branch (inclui complexidade cognitiva < 15, que o script não mede) e
-decide se abre o PR 1a. Se a revisão reprovar, corrigir em tasks novas (T7g…), com TDD.
+Começar o PR 1b do plano 001 (`protect-merge`): rodar `git fetch`, partir de `origin/develop`, rodar
+`scripts/verify.sh test` e `git status` antes de agir. Primeira task: T8 (testes VERMELHOS dos achados do PR #8
+em `protect-merge.test.sh`: `&` solto, `|&`, flag antes de `api`/`alias`). A T8 e a T9a vão no MESMO push (o hook
+Stop e o CI exigem 100%). Antes de abrir o PR 1b, o dono decide se roda a `/revisar` (inclui complexidade
+cognitiva < 15, que o `scripts/complexidade.sh` não mede) sobre o `divisor.sh` já mergeado.
 
 ## Decisões
 Nenhum ADR novo. Opção A (helper por estado/ramo) para a T7f; régua por contagem de texto (opção a), sem
@@ -35,6 +38,9 @@ entrar no `verify.sh` (só mede; pode virar barreira depois da T7f, se o dono qu
 de 2 s do teste de desempenho: as correções foram no código.
 
 ## Problemas
+- O `divisor.sh` está na `develop` sem revisão independente das correções T7b–T7f (a revisão anterior deu
+  REPROVADO com 7 🔴, depois corrigidos). O `protect-merge` não barrou o merge. A regra do CLAUDE.md exige
+  `/revisar` sem 🔴/🟡 para merge; neste caso o dono a dispensou. O PR 1b passa a depender desse código.
 - Ainda acima de 9 pela régua, fora da T7f: `achar_subcomando` (12), `_redir_emitir` (12),
   `_desemb_aparar_parenteses` (11).
 - A régua errava em palavras reservadas dentro de padrão de `case`; corrigido (1ccd631, 96d1bfd). Pode
