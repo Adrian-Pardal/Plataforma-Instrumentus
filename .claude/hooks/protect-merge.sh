@@ -14,8 +14,9 @@
 # apontada por GH_CONFIG_DIR/XDG_CONFIG_HOME. Bloqueados (opção B): $, crase, \ e { em 'gh pr merge' (o shell os
 # expandiria sem o hook ver); "merge" num comando gh fora da forma "gh pr merge" (flag entre os termos; falso
 # bloqueio aceito: "gh pr view merge"); GH_REPO/GH_HOST no prefixo; "gh alias set/import". O "ask" do
-# settings.json só casa comandos que começam com "gh pr merge": não cobre env gh, command gh, xargs gh, sh -c,
-# subshell nem "gh -R x pr merge".
+# settings.json (documentação oficial do Claude Code) separa comandos compostos, vê subshell e remove "command" e
+# "xargs" sem flags: cobre "cd x && gh pr merge" e "command gh pr merge", mas não "sh -c", "xargs" com flags,
+# "gh -R x pr merge" nem "gh api"/"gh alias" (env gh: não confirmado).
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
 bloquear() { echo "🚫 protect-merge: $1" >&2; exit 2; }
