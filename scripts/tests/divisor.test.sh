@@ -427,5 +427,62 @@ caso_segmentos "<< aritmético não é heredoc"         $'x=$((1<<3))\ngit push 
 caso_segmentos "<< aritmético no meio do comando"    $'echo $((2<<1)) && ls'                            $'[echo $((2<<1))][ls]'
 caso_segmentos "<< dentro de comentário não é heredoc" $'echo hi # usa <<EOF\ngit push origin main'    '[echo hi][git push origin main]'
 
+echo "▶ wrappers (T7c): timeout, nice, stdbuf, ionice, setsid, noglob, exec e --"
+caso_wrap "timeout com duração"              'timeout 5 git push origin main'    '[git][push][origin][main]' '[timeout]'
+caso_wrap "timeout -s SINAL duração"         'timeout -s KILL 5 git push'        '[git][push]'               '[timeout]'
+caso_wrap "timeout --signal=SINAL duração"   'timeout --signal=KILL 5 git push'  '[git][push]'               '[timeout]'
+caso_wrap "timeout -k tempo duração"         'timeout -k 2 5 git push'           '[git][push]'               '[timeout]'
+caso_wrap "timeout --foreground"             'timeout --foreground 5 git push'   '[git][push]'               '[timeout]'
+caso_wrap "nice"                             'nice git push origin main'         '[git][push][origin][main]' '[nice]'
+caso_wrap "nice -n N"                        'nice -n 10 git push'               '[git][push]'               '[nice]'
+caso_wrap "nice -N"                          'nice -10 git push'                 '[git][push]'               '[nice]'
+caso_wrap "stdbuf -o0"                       'stdbuf -o0 git push'               '[git][push]'               '[stdbuf]'
+caso_wrap "stdbuf -o 0 -e L"                 'stdbuf -o 0 -e L git push'         '[git][push]'               '[stdbuf]'
+caso_wrap "ionice -c 3"                      'ionice -c 3 git push'              '[git][push]'               '[ionice]'
+caso_wrap "setsid"                           'setsid git push'                   '[git][push]'               '[setsid]'
+caso_wrap "setsid -f"                        'setsid -f git push'                '[git][push]'               '[setsid]'
+caso_wrap "noglob"                           'noglob git push'                   '[git][push]'               '[noglob]'
+caso_wrap "exec"                             'exec git push origin main'         '[git][push][origin][main]' '[exec]'
+caso_wrap "exec -a NOME"                     'exec -a x git push'                '[git][push]'               '[exec]'
+caso_wrap "time --"                          'time -- git push'                  '[git][push]'               '[time]'
+caso_wrap "command --"                       'command -- git push'               '[git][push]'               '[command]'
+caso_wrap "vários: nohup nice"               'nohup nice git push origin main'   '[git][push][origin][main]' '[nohup][nice]'
+
+echo "▶ palavras reservadas (T7c): if, then, else, elif, do, while, until, !, case"
+caso_wrap "then"                             'then git push origin main'         '[git][push][origin][main]' '[then]'
+caso_wrap "do"                               'do git push origin main'           '[git][push][origin][main]' '[do]'
+caso_wrap "else"                             'else git push origin main'         '[git][push][origin][main]' '[else]'
+caso_wrap "elif"                             'elif git push origin main'         '[git][push][origin][main]' '[elif]'
+caso_wrap "if"                               'if git push origin main'           '[git][push][origin][main]' '[if]'
+caso_wrap "while"                            'while git push origin main'        '[git][push][origin][main]' '[while]'
+caso_wrap "until"                            'until git push origin main'        '[git][push][origin][main]' '[until]'
+caso_wrap "!"                                '! git push origin main'            '[git][push][origin][main]' '[!]'
+caso_wrap "case x in padrão)"                'case x in x) git push origin main' '[git][push][origin][main]' '[case]'
+caso_wrap "padrão) de um case"               'b) git push origin main'           '[git][push][origin][main]' '[case]'
+caso_wrap "then entre aspas é um comando"    '"then" git push'                   '[then][git][push]'         ''
+
+echo "▶ wrappers que não sabemos abrir (T7c): não suportado"
+caso_wrap "eval"                             'eval git push origin main'         '[eval][git][push][origin][main]' '' 'eval'
+caso_wrap "watch"                            'watch git push'                    '[watch][git][push]'        ''  'watch'
+caso_wrap "coproc"                           'coproc git push'                   '[coproc][git][push]'       ''  'coproc'
+caso_wrap "parallel"                         'parallel git push ::: a'           '[parallel][git][push][:::][a]' '' 'parallel'
+caso_wrap "find -exec"                       'find . -exec git push origin main' '[find][.][-exec][git][push][origin][main]' '' 'find'
+caso_wrap "find sem -exec não é wrapper"     'find . -name x'                    '[find][.][-name][x]'       ''
+caso_wrap "env -iS (S colado a outra opção)" 'env -iS "git push origin main"'    '[env][-iS][git push origin main]' '' 'env'
+caso_wrap "env -vS"                          'env -vS x'                         '[env][-vS][x]'             ''  'env'
+caso_wrap "env -C dir -S"                    'env -C /x -S "git push"'           '[env][-C][/x][-S][git push]' '' 'env'
+caso_wrap "env -u S não tem -S"              'env -u S gh pr'                    '[gh][pr]'                  '[env]'
+
+echo "▶ parênteses que sobram (T7c)"
+caso_wrap ") sobrando no último argumento"   'git push origin feat/a --force)'    '[git][push][origin][feat/a][--force]' ''
+caso_wrap ") entre aspas não conta"          'echo ")"'                          '[echo][)]'                 ''
+caso_wrap "\$(...) equilibrado fica"         $'echo $(date)'                     $'[echo][$(date)]'          ''
+
+echo "▶ o comando de dentro é achado (T7c)"
+caso_sub "timeout e git push"                'timeout 5 git push origin main'    'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS= DIR= ENV='
+caso_sub "then e git push"                   'then git push origin main'         'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS= DIR= ENV='
+caso_sub "nohup nice git -C"                 'nohup nice git -C /x push'         'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/x] DIR=/x ENV='
+caso_sub "--force) sem o parêntese"          'git push origin feat/a --force)'   'PROG=git SUB=push SUB2= ARGS=[origin][feat/a][--force] FLAGS= DIR= ENV='
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
