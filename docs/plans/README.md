@@ -7,4 +7,4 @@ ORDEM construir o que a spec (ou o ADR, quando não há spec) pede. Só se imple
 
 | Nº | Plano | Status | Data |
 |----|-------|--------|------|
-| 001 | [Divisor de comandos compartilhado para os hooks](001-divisor-de-comandos.md) | Aprovado | 2026-11-20 |
+| 001 | [Divisor de comandos compartilhado para os hooks](001-divisor-de-comandos.md) | Rascunho | 2026-11-20 |
