@@ -123,7 +123,7 @@ PR 1a (divisor):
 - [x] T7e [infra] — desempenho: `dividir_comando`, `tokenizar_segmento` e `separar_redirecionamentos` lineares; teste com UM
   segmento entre aspas de 20 KB pelo pipeline inteiro, com limite · Cobre: D1 (risco de desempenho) ·
   Teste: divisor.test.sh › desempenho (90 min)
-- [ ] T7f [infra] — refatoração: dividir `dividir_comando`, `tokenizar_segmento`, `separar_redirecionamentos` e `desembrulhar`
+- [x] T7f [infra] — refatoração: dividir `dividir_comando`, `tokenizar_segmento`, `separar_redirecionamentos` e `desembrulhar`
   abaixo de ciclomática 10 e cognitiva 15, sem mudar o comportamento (todos os testes continuam iguais) · Cobre: D1 a D4
   (qualidade) · Teste: divisor.test.sh inteiro (90 min)
 
