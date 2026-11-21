@@ -222,6 +222,7 @@ caso_sub() {   # caso_sub <descrição> <segmento> <esperado: "PROG=.. SUB=.. SU
   local descricao="$1" seg="$2" esperado="$3" a="" f="" e="" x obtido
   tokenizar_segmento "$seg"
   separar_redirecionamentos
+  desembrulhar
   achar_subcomando
   for x in "${ARGS[@]}"; do a+="[$x]"; done
   for x in "${FLAGS_GLOBAIS[@]}"; do f+="[$x]"; done
@@ -271,6 +272,58 @@ caso_sub "GH_REPO antes do gh"               'GH_REPO=o/r gh pr merge 1 --merge'
 caso_sub "programa por caminho"              '/usr/bin/gh pr view 1' 'PROG=gh SUB=pr SUB2=view ARGS=[1] FLAGS= DIR= ENV='
 caso_sub "outro programa"                    'ls -la'                'PROG= SUB= SUB2= ARGS= FLAGS= DIR= ENV='
 caso_sub "git como argumento de outro programa" 'echo git push'      'PROG= SUB= SUB2= ARGS= FLAGS= DIR= ENV='
+
+caso_wrap() {   # caso_wrap <descrição> <segmento> <palavras> <wrappers tirados> [não suportado]
+  local descricao="$1" seg="$2" esp_tok="$3" esp_wr="$4" esp_ns="${5:-}" tok="" wr="" x alinhado=1
+  tokenizar_segmento "$seg"
+  separar_redirecionamentos
+  desembrulhar
+  for x in "${TOK[@]}"; do tok+="[$x]"; done
+  for x in "${WRAPPERS[@]}"; do wr+="[$x]"; done
+  [[ ${#TOK[@]} -eq ${#TOK_CITADO[@]} && ${#TOK[@]} -eq ${#TOK_MASCARA[@]} ]] || alinhado=0
+  if [[ "$tok" == "$esp_tok" && "$wr" == "$esp_wr" && "$WRAPPER_NAO_SUPORTADO" == "$esp_ns" && $alinhado -eq 1 ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado palavras='$esp_tok' wrappers='$esp_wr' não-suportado='$esp_ns'," \
+      "veio palavras='$tok' wrappers='$wr' não-suportado='$WRAPPER_NAO_SUPORTADO' alinhado=$alinhado" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ wrappers: env, command, xargs, sudo, nohup, time"
+caso_wrap "env"                              'env gh pr merge 1'          '[gh][pr][merge][1]'      '[env]'
+caso_wrap "env com VAR=valor"                'env FOO=1 gh pr merge'      '[FOO=1][gh][pr][merge]'  '[env]'
+caso_wrap "env -i"                           'env -i gh pr'               '[gh][pr]'                '[env]'
+caso_wrap "env -u NOME"                      'env -u X gh pr'             '[gh][pr]'                '[env]'
+caso_wrap "VAR=valor antes do env"           'VAR=1 env gh pr'            '[VAR=1][gh][pr]'         '[env]'
+caso_wrap "command"                          'command gh pr merge 1'      '[gh][pr][merge][1]'      '[command]'
+caso_wrap "command -p"                       'command -p gh pr'           '[gh][pr]'                '[command]'
+caso_wrap "command -v só consulta"           'command -v gh'              '[command][-v][gh]'       ''
+caso_wrap "builtin"                          'builtin gh pr'              '[gh][pr]'                '[builtin]'
+caso_wrap "nohup"                            'nohup gh pr merge 1'        '[gh][pr][merge][1]'      '[nohup]'
+caso_wrap "time"                             'time gh pr merge 1'         '[gh][pr][merge][1]'      '[time]'
+caso_wrap "time -p"                          'time -p gh pr'              '[gh][pr]'                '[time]'
+caso_wrap "sudo"                             'sudo gh pr merge 1'         '[gh][pr][merge][1]'      '[sudo]'
+caso_wrap "sudo -u usuário"                  'sudo -u root gh pr'         '[gh][pr]'                '[sudo]'
+caso_wrap "xargs sem flags"                  'xargs gh pr merge 1'        '[gh][pr][merge][1]'      '[xargs]'
+caso_wrap "xargs com flags não é desembrulhado" 'xargs -n1 gh pr merge 1' '[xargs][-n1][gh][pr][merge][1]' '' 'xargs'
+caso_wrap "vários wrappers"                  'env sudo nohup gh pr merge' '[gh][pr][merge]'         '[env][sudo][nohup]'
+caso_wrap "wrapper sozinho"                  'env'                        ''                        '[env]'
+caso_wrap "comando sem wrapper"              'ls -la'                     '[ls][-la]'               ''
+caso_wrap "env como argumento"               'echo env gh'                '[echo][env][gh]'         ''
+
+echo "▶ wrappers: grupos de comandos"
+caso_wrap "subshell colado"                  '(gh pr merge 1)'            '[gh][pr][merge][1]'      '[(]'
+caso_wrap "subshell com espaços"             '( gh pr merge 1 )'          '[gh][pr][merge][1]'      '[(]'
+caso_wrap "chaves"                           '{ gh pr merge 1'            '[gh][pr][merge][1]'      '[{]'
+caso_wrap "( entre aspas não é subshell"     '"(gh" pr'                   '[(gh][pr]'               ''
+
+echo "▶ wrappers: o comando de dentro é achado"
+caso_sub "env com GH_REPO"                   'env GH_REPO=o/r gh pr merge 1' 'PROG=gh SUB=pr SUB2=merge ARGS=[1] FLAGS= DIR= ENV=[GH_REPO=o/r]'
+caso_sub "sudo -u e git push"                'sudo -u root git push origin main' 'PROG=git SUB=push SUB2= ARGS=[origin][main] FLAGS= DIR= ENV='
+caso_sub "xargs sem flags"                   'xargs gh pr merge 1'        'PROG=gh SUB=pr SUB2=merge ARGS=[1] FLAGS= DIR= ENV='
+caso_sub "subshell com git -C"               '(git -C /x push)'           'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/x] DIR=/x ENV='
+caso_sub "xargs com flags: programa desconhecido" 'xargs -n1 git push'    'PROG= SUB= SUB2= ARGS= FLAGS= DIR= ENV='
 
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"

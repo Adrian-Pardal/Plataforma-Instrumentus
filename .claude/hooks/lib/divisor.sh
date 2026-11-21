@@ -228,6 +228,14 @@ achar_subcomando() {   # usa TOK (depois de tokenizar_segmento e separar_redirec
   ARGS=("${TOK[@]:j}")
 }
 
+# Entra nos "embrulhos" do comando e deixa em TOK o comando de dentro: env, command, builtin, nohup, time, sudo,
+# xargs (sem flags) e grupo "( ... )" ou "{ ...". Deixa em WRAPPERS o que foi tirado, na ordem. "command -v" só
+# consulta e não executa: não se desembrulha. "xargs" com flags não é desembrulhado e fica em WRAPPER_NAO_SUPORTADO.
+# T6: esqueleto vazio; o corpo vem na fase verde.
+desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redirecionamentos)
+  WRAPPERS=(); WRAPPER_NAO_SUPORTADO=""
+}
+
 # Flags que levam um valor no token seguinte ("-C dir", "-R dono/repo"). Com "=" ("--git-dir=/x") o valor já vem junto.
 _flag_leva_valor() {   # $1 = programa, $2 = flag
   case "$1:$2" in
