@@ -389,5 +389,43 @@ caso_segmentos "<< dentro de aspas não é heredoc"  "echo '<<EOF' && ls"       
 caso_segmentos "corpo com \$( e delimitador solto vira segmento" $'cat <<EOF\n$(git push origin main)\nEOF' $'[cat <<EOF][$(git push origin main)]'
 caso_segmentos "corpo com \$( e delimitador entre aspas é literal" $'cat <<\'EOF\'\n$(git push origin main)\nEOF' "[cat <<'EOF']"
 
+echo "▶ lexer: comentário com # (só no começo de palavra)"
+caso_segmentos "comentário com apóstrofo não abre aspas"    $'echo x # it\'s\ngit push origin main'  '[echo x][git push origin main]'
+caso_segmentos "# no meio da palavra não é comentário"      'echo a#b && ls'                            '[echo a#b][ls]'
+caso_segmentos "linha só de comentário"                     '# só comentário'                           ''
+caso_segmentos "# entre aspas não é comentário"             'echo "# não é comentário"'                 '[echo "# não é comentário"]'
+caso_segmentos "comentário entre comandos"                  $'ls # c1\n# c2\nls'                         '[ls][ls]'
+caso_segmentos "o ; dentro do comentário não separa"        'echo a # x; git push'                      '[echo a]'
+caso_segmentos "\$# não é comentário"                       $'echo $#'                                   $'[echo $#]'
+caso_segmentos "espaço protegido por barra não abre comentário" 'echo a\ #b'                            '[echo a\ #b]'
+caso_tokens "comentário no fim do segmento"   'echo a # b c'      '[echo][a]'      '0,0'
+caso_tokens "# no meio da palavra"            'echo a#b'          '[echo][a#b]'    '0,0'
+caso_tokens "# entre aspas"                   'echo "#x"'         '[echo][#x]'     '0,1'
+
+echo "▶ lexer: \$'...' (ANSI-C: a barra protege a letra seguinte)"
+caso_segmentos "\$'\\'' não fecha a aspa antes da hora" $'echo $\'\\\'\'; git push origin main' $'[echo $\'\\\'\'][git push origin main]'
+caso_segmentos "; dentro de \$'...'"            $'echo $\'a;b\' && ls'                 $'[echo $\'a;b\'][ls]'
+caso_segmentos "\\\$ escapado e depois aspas simples" $'echo \\$\'a;b\''                 $'[echo \\$\'a;b\']'
+caso_tokens "\$'push' vale push"                $'git $\'push\' origin'                '[git][push][origin]'   '0,1,0'
+caso_tokens "\$'a\\tb' decodifica o tab"        $'echo $\'a\\tb\''                     $'[echo][a\tb]'         '0,1'
+caso_tokens "\$'it\\'s' decodifica a aspa"      $'echo $\'it\\\'s\''                   "[echo][it's]"          '0,1'
+caso_tokens "\$'\\x70ush' não é decodificado (ininterpretável)" $'git $\'\\x70ush\' origin' $'[git][\\x70ush][origin]' '0,1,0' 1
+caso_tokens "\\\$ escapado não abre \$'...'"    $'echo \\$\'a b\''                     $'[echo][$a b]'         '0,1'
+
+echo "▶ lexer: <(...) e >(...) são ininterpretáveis, como \$("
+caso_tokens "process substitution de leitura"   'cat <(ls)'            '[cat][<(ls)]'   '0,0' 1
+caso_tokens "process substitution de escrita"   'echo >(cat)'          '[echo][>(cat)]' '0,0' 1
+caso_tokens "<( entre aspas é texto"            'echo "<(ls)"'         '[echo][<(ls)]'  '0,1'
+
+echo "▶ lexer: heredoc com delimitador de aspas parciais e << que não é heredoc"
+caso_segmentos "delimitador E\"O\"F"                 $'cat <<E"O"F\nx\nEOF\ngit push origin main'    '[cat <<E"O"F][git push origin main]'
+caso_segmentos "delimitador E'O'F"                   $'cat <<E\'O\'F\nx\nEOF\nls'                      "[cat <<E'O'F][ls]"
+caso_segmentos "delimitador entre aspas duplas"      $'cat <<"EOF"\n$(git push origin main)\nEOF\nls'  '[cat <<"EOF"][ls]'
+caso_segmentos "delimitador com barra na frente"     $'cat <<\\EOF\n$(git push)\nEOF\nls'               '[cat <<\EOF][ls]'
+caso_segmentos "delimitador com barra no meio"       $'cat <<EO\\F\nx\nEOF\nls'                         '[cat <<EO\F][ls]'
+caso_segmentos "<< aritmético não é heredoc"         $'x=$((1<<3))\ngit push origin main'              $'[x=$((1<<3))][git push origin main]'
+caso_segmentos "<< aritmético no meio do comando"    $'echo $((2<<1)) && ls'                            $'[echo $((2<<1))][ls]'
+caso_segmentos "<< dentro de comentário não é heredoc" $'echo hi # usa <<EOF\ngit push origin main'    '[echo hi][git push origin main]'
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
