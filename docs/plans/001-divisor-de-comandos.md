@@ -86,7 +86,7 @@ PR 1a (divisor):
   `# shellcheck shell=bash` no lib; ajustar `verify.test.sh` · Cobre: D7 · Teste: verify.test.sh (30 min)
 - [x] 🎓 T1 [infra] — `lib/divisor.sh` e `dividir_comando`: separa por `&`, `&&`, `||`, `;`, `|`, `|&` e quebra
   de linha, ignorando o que está entre aspas (versão simples) · Cobre: D1 · Teste: divisor.test.sh › separadores (60 min)
-- [ ] T2 [infra] — aspas numa só passada: `"a|b"`, `'x;y'`, apóstrofo dentro de aspas duplas, escape `\`; mais
+- [x] T2 [infra] — aspas numa só passada: `"a|b"`, `'x;y'`, apóstrofo dentro de aspas duplas, escape `\`; mais
   um comando de alguns KB (desempenho) · Cobre: D1 · Teste: divisor.test.sh › aspas (90 min)
 - [ ] T3 [infra] — `tokenizar_segmento` com `TOK_CITADO`; aspas sem fechar marcam `ININTERPRETAVEL` ·
   Cobre: D1, D4 · Teste: divisor.test.sh › tokens (60 min)
