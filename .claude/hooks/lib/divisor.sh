@@ -305,6 +305,25 @@ _desemb_remover() {
   msk=("${msk[@]:0:$1}" "${msk[@]:$(($1 + $2))}")
 }
 
+# Analisa UM segmento de ponta a ponta: tokeniza, tira os redirecionamentos, desembrulha os wrappers e acha o
+# programa e o subcomando. É só a composição das funções acima; o resultado fica nas variáveis delas
+# (PROG, SUB, SUB2, ARGS, ININTERPRETAVEL...). Guarda o texto cru em SEGMENTO_CRU.
+analisar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
+  SEGMENTO_CRU="$1"
+  tokenizar_segmento "$1"
+  separar_redirecionamentos
+  desembrulhar
+  achar_subcomando
+}
+
+# A regra da falha fechada (ADR 0005): quando o segmento não se deixa interpretar, o hook decide se bloqueia.
+# Devolve 0 = bloquear, 1 = liberar. O hook define PROTEGIDOS, a lista de ações que protege (por exemplo
+# ("git push" "gh pr merge" "gh api" "gh alias")). Usa o que analisar_segmento deixou.
+# T7: esqueleto; devolve "liberar" sempre. O corpo vem na fase verde.
+falha_fechada() {
+  return 1
+}
+
 # Flags que levam um valor no token seguinte ("-C dir", "-R dono/repo"). Com "=" ("--git-dir=/x") o valor já vem junto.
 _flag_leva_valor() {   # $1 = programa, $2 = flag
   case "$1:$2" in

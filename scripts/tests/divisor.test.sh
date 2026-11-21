@@ -329,5 +329,65 @@ caso_sub "xargs sem flags"                   'xargs gh pr merge 1'        'PROG=
 caso_sub "subshell com git -C"               '(git -C /x push)'           'PROG=git SUB=push SUB2= ARGS= FLAGS=[-C][/x] DIR=/x ENV='
 caso_sub "xargs com flags: programa desconhecido" 'xargs -n1 git push'    'PROG= SUB= SUB2= ARGS= FLAGS= DIR= ENV='
 
+echo "▶ tokens: \$( e crase fora de aspas simples são ininterpretáveis"
+caso_tokens "substituição de comando em aspas duplas" $'echo "$(date)"'   $'[echo][$(date)]'   '0,1' 1
+caso_tokens "substituição de comando solta"           $'echo $(date)'     $'[echo][$(date)]'   '0,0' 1
+caso_tokens "crase solta"                             $'echo `date`'      $'[echo][`date`]'    '0,0' 1
+caso_tokens "crase em aspas duplas"                   $'echo "a`date`b"'  $'[echo][a`date`b]'  '0,1' 1
+caso_tokens "em aspas simples é literal"              $'echo \'$(date)\'' $'[echo][$(date)]'   '0,1'
+caso_tokens "barra protege o \$( (literal)"           $'echo \\$(date)'   $'[echo][$(date)]'   '0,1'
+caso_tokens "barra dentro de aspas duplas protege o \$( (literal)" $'echo "\\$(date)"' $'[echo][$(date)]' '0,1'
+caso_tokens "variável simples não é ininterpretável"  $'echo "$VAR"'      $'[echo][$VAR]'      '0,1'
+
+caso_falha_fechada() {   # caso_falha_fechada <descrição> <segmento> <bloquear|liberar>
+  local descricao="$1" seg="$2" esperado="$3" obtido
+  # shellcheck disable=SC2034  # PROTEGIDOS é lida por falha_fechada, em divisor.sh
+  PROTEGIDOS=("git push" "gh pr merge" "gh api" "gh alias")
+  analisar_segmento "$seg"
+  if falha_fechada; then obtido=bloquear; else obtido=liberar; fi
+  if [[ "$obtido" == "$esperado" ]]; then
+    echo "  ok    $descricao"
+  else
+    echo "  FALHA $descricao: esperado $esperado, veio $obtido (PROG=$PROG SUB=$SUB SUB2=$SUB2 ininterpretável=$ININTERPRETAVEL)" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ falha fechada: só bloqueia comando protegido ou programa que não se acha"
+caso_falha_fechada "git commit com \$( na mensagem libera"  $'git commit -m "feat: $(date)"'          liberar
+caso_falha_fechada "git commit com heredoc libera"          $'git commit -m "$(cat <<\'EOF\'\nmsg\nEOF\n)"' liberar
+caso_falha_fechada "echo com \$(git ...) libera"            $'echo "$(git rev-parse HEAD)"'           liberar
+caso_falha_fechada "git commit -m \$(git log) libera"       $'git commit -m "$(git log -1)"'          liberar
+caso_falha_fechada "primeira palavra é expansão sem gh/git libera" $'$(whoami) -l'                    liberar
+caso_falha_fechada "aspas abertas em comando comum libera"  'echo "abc'                              liberar
+caso_falha_fechada "aspas simples: não há expansão"         "echo '\$(git push)'"                    liberar
+caso_falha_fechada "tudo interpretável: a regra não age"    'git push origin main'                   liberar
+caso_falha_fechada "xargs com flags sem gh/git libera"      'xargs -n1 ls'                           liberar
+caso_falha_fechada "git push com \$( no argumento"          $'git push "$(echo origin)" main'         bloquear
+caso_falha_fechada "git -C x push com \$( no argumento"     $'git -C /x push "$(echo o)"'             bloquear
+caso_falha_fechada "gh pr merge com aspas abertas"          'gh pr merge 1 --body "abc'              bloquear
+caso_falha_fechada "git push com aspas abertas"             'git push origin "main'                  bloquear
+caso_falha_fechada "gh api com \$( na query"                $'gh api graphql -f query="$(cat q.txt)"' bloquear
+caso_falha_fechada "gh alias set com \$("                   $'gh alias set x "$(y)"'                  bloquear
+caso_falha_fechada "sudo git push com \$("                  $'sudo git push "$(x)"'                   bloquear
+caso_falha_fechada "primeira palavra é \$(echo git)"        $'$(echo git) push origin main'           bloquear
+caso_falha_fechada "primeira palavra é crase com gh"        $'`echo gh` pr merge 1'                   bloquear
+caso_falha_fechada "xargs com flags e git"                  'xargs -n1 git push'                     bloquear
+caso_falha_fechada "env -S com gh"                          'env -S "gh pr merge 1"'                 bloquear
+
+echo "▶ heredoc: o corpo não é comando"
+caso_segmentos "heredoc simples"                   $'cat <<EOF\nlinha\nEOF\nls'                    '[cat <<EOF][ls]'
+caso_segmentos "delimitador entre aspas simples"   $'cat <<\'EOF\'\ngit push origin main\nEOF'     "[cat <<'EOF']"
+caso_segmentos "<<- aceita tab no fim"             $'cat <<-EOF\n\tx\n\tEOF\nls'                  '[cat <<-EOF][ls]'
+caso_segmentos "comando depois do <<EOF na mesma linha" $'cat <<EOF && ls\nx\nEOF'               '[cat <<EOF][ls]'
+caso_segmentos "heredoc dentro de aspas é uma palavra só" $'git commit -m "$(cat <<\'EOF\'\nmsg\nEOF\n)"' $'[git commit -m "$(cat <<\'EOF\'\nmsg\nEOF\n)"]'
+caso_segmentos "<<< não é heredoc"                 $'cat <<< x\nls'                              '[cat <<< x][ls]'
+caso_segmentos "heredoc sem terminador"            $'cat <<EOF\nx'                               '[cat <<EOF]'
+caso_segmentos "dois heredocs na mesma linha"      $'cat <<A <<B\n1\nA\n2\nB\nls'                '[cat <<A <<B][ls]'
+caso_segmentos "comandos depois do terminador"     $'cat <<EOF\nx\nEOF\nls && pwd'               '[cat <<EOF][ls][pwd]'
+caso_segmentos "<< dentro de aspas não é heredoc"  "echo '<<EOF' && ls"                          "[echo '<<EOF'][ls]"
+caso_segmentos "corpo com \$( e delimitador solto vira segmento" $'cat <<EOF\n$(git push origin main)\nEOF' $'[cat <<EOF][$(git push origin main)]'
+caso_segmentos "corpo com \$( e delimitador entre aspas é literal" $'cat <<\'EOF\'\n$(git push origin main)\nEOF' "[cat <<'EOF']"
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
