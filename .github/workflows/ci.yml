@@ -93,8 +93,9 @@ jobs:
     if: ${{ failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    # Um de cada vez: com dois pushes falhando juntos, o segundo espera o primeiro abrir a issue
-    # e então vê que já há uma aberta. Não cancela (cancel-in-progress: false).
+    # Reforço: o concurrency do workflow (acima) já serializa os pushes na main. Aqui o job também
+    # roda um de cada vez, sem cancelar o que está em execução (cancel-in-progress: false); um
+    # pendente pode ser substituído por outro mais novo, o que não duplica a issue.
     concurrency:
       group: registrar-falha
       cancel-in-progress: false

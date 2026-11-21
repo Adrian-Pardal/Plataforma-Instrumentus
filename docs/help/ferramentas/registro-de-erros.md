@@ -44,7 +44,9 @@ você cria uma vez (passo 1). Cada modelo de issue aplica a sua etiqueta sozinho
    do log e o commit. Se já houver uma issue aberta com essa etiqueta e esse título, não abre outra.
    A checagem busca o título como texto (`in:title`), não por igualdade exata: uma issue aberta com
    etiqueta `incidente` e um título parecido também impede a abertura. Falhas simultâneas na `main` são
-   atendidas uma por vez (`concurrency` do job), então não duplicam.
+   serializadas (`concurrency` do workflow e do job; um pendente pode ser substituído por outro mais novo),
+   o que reduz muito a chance de duplicar, mas não a elimina: a busca do GitHub pode demorar alguns
+   segundos para enxergar a issue recém-criada. Se aparecer uma duplicada, feche uma delas.
    Para ver o log: `gh run view <id> --log-failed`.
 
 ## COMO CONFERIR QUE DEU CERTO
