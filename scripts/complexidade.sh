@@ -22,12 +22,15 @@ awk -v limite="$limite" '
     gsub(/"[^"]*"|'\''[^'\'']*'\''/, "", linha)   # texto entre aspas não é decisão
     sub(/[ \t]#.*/, "", linha)                     # comentário também não
     if (linha ~ /^[ \t]*#/) next
-    n += gsub(/(^|[ ;({])(if|elif|while|until|for)[ (]/, "&", linha)
-    n += gsub(/&&|\|\|/, "&", linha)
     if (case_ind >= 0) {
       if (linha ~ /^[ \t]*esac/) { case_ind = -1 }
-      else if (indent(linha) == case_ind + 2 && linha ~ /\)/) n++    # um ramo do case
+      else if (indent(linha) == case_ind + 2 && linha ~ /\)/) {
+        n++                                        # um ramo do case
+        sub(/^[^)]*\)/, "", linha)                 # o padrão ("if | while)") é texto, não decisão
+      }
     } else if (linha ~ /(^|[ \t;])case .* in([ \t]|$)/) case_ind = indent(linha)
+    n += gsub(/(^|[ ;({])(if|elif|while|until|for)[ (]/, "&", linha)
+    n += gsub(/&&|\|\|/, "&", linha)
   }
   END { exit ruim }
 ' "$@" | sort -rn
