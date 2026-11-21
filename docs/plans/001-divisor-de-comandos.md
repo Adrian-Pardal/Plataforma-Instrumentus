@@ -82,7 +82,7 @@ Cada commit leva o rodapé `Task: T<n>`. Testes novos em `scripts/tests/divisor.
 Marque com 🎓 as tasks que você faz à mão.
 
 PR 1a (divisor):
-- [ ] T0 [infra] — `verify.sh`: incluir `.claude/hooks/lib/*.sh` no shellcheck do modo full e exigir
+- [x] T0 [infra] — `verify.sh`: incluir `.claude/hooks/lib/*.sh` no shellcheck do modo full e exigir
   `# shellcheck shell=bash` no lib; ajustar `verify.test.sh` · Cobre: D7 · Teste: verify.test.sh (30 min)
 - [ ] 🎓 T1 [infra] — `lib/divisor.sh` e `dividir_comando`: separa por `&`, `&&`, `||`, `;`, `|`, `|&` e quebra
   de linha, ignorando o que está entre aspas (versão simples) · Cobre: D1 · Teste: divisor.test.sh › separadores (60 min)
