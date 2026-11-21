@@ -71,6 +71,37 @@ else
   echo "  • shellcheck não instalado: casos do modo full pulados"
 fi
 
+# Biblioteca sem shebang (.claude/hooks/lib/*.sh): o shellcheck do modo full também precisa olhá-la.
+# Sem a diretiva "# shellcheck shell=bash", o próprio shellcheck reprova (SC2148). Plano 001, T0.
+caso_lib() {   # caso_lib <esperado> <modo> <descrição> <conteúdo do lib>
+  local esperado="$1" modo="$2" descricao="$3" lib="$4" obtido
+  rm -rf "$TMP2/scripts" "$TMP2/.claude"; mkdir -p "$TMP2/scripts/tests" "$TMP2/.claude/hooks/lib"
+  printf '%s\n' "$lib" > "$TMP2/.claude/hooks/lib/x.sh"
+  VERIFY_RAIZ="$TMP2" "$VERIFY" "$modo" >/dev/null 2>&1
+  obtido=$?
+  if [[ "$obtido" == "$esperado" ]]; then
+    echo "  ok    ($esperado) $descricao"
+  else
+    echo "  FALHA (esperado $esperado, veio $obtido) $descricao" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+LIB_OK=$'# shellcheck shell=bash\nf() { echo "oi"; }'
+LIB_SEM_DIRETIVA='f() { echo "oi"; }'
+LIB_RUIM=$'# shellcheck shell=bash\ncd $1'   # SC2086/SC2164: shellcheck reclama
+
+echo "▶ verify.sh: o shellcheck também olha .claude/hooks/lib/*.sh"
+if command -v shellcheck >/dev/null; then
+  caso_lib 0 full "full: lib limpo, com a diretiva shell=bash, passa"  "$LIB_OK"
+  caso_lib 1 full "full: lib com erro de shellcheck reprova"           "$LIB_RUIM"
+  caso_lib 1 full "full: lib sem a diretiva shell=bash reprova"        "$LIB_SEM_DIRETIVA"
+  caso_lib 0 test "test: não roda shellcheck no lib"                   "$LIB_RUIM"
+else
+  echo "  • shellcheck não instalado: casos do lib pulados"
+fi
+rm -rf "$TMP2/.claude"   # os casos do actionlint abaixo reaproveitam esta pasta
+
 # actionlint: usa um "actionlint" falso no PATH e um projeto com (ou sem) .github/workflows.
 caso_actionlint() {   # caso_actionlint <esperado> <modo> <descrição> <saída do actionlint falso> <com workflows: sim|nao>
   local esperado="$1" modo="$2" descricao="$3" saida="$4" com_wf="$5" obtido FALSO3

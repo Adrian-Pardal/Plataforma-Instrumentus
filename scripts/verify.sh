@@ -75,7 +75,8 @@ rodar_shellcheck() {
   fi
   local -a arquivos=()
   local f
-  for f in "$RAIZ"/.claude/hooks/*.sh "$RAIZ"/scripts/*.sh "$RAIZ"/scripts/tests/*.sh; do
+  # lib/*.sh não tem shebang: sem "# shellcheck shell=bash" no topo, o próprio shellcheck reprova (SC2148).
+  for f in "$RAIZ"/.claude/hooks/*.sh "$RAIZ"/.claude/hooks/lib/*.sh "$RAIZ"/scripts/*.sh "$RAIZ"/scripts/tests/*.sh; do
     [[ -f "$f" ]] && arquivos+=("$f")
   done
   [[ ${#arquivos[@]} -gt 0 ]] || return 0
