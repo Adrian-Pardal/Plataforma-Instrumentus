@@ -205,7 +205,48 @@ separar_redirecionamentos() {   # usa TOK, TOK_CITADO e TOK_MASCARA (o que token
 # Acha, em TOK, o programa (gh ou git), as variáveis "VAR=valor" que vêm antes dele, as flags globais e o
 # subcomando. Deixa em PROG (gh, git ou vazio), ENV_PREFIXO, FLAGS_GLOBAIS (cada flag e o valor dela, na ordem),
 # DIR_GIT (o valor de "-C"), SUB, SUB2 (o 2º nível de "gh pr" e "gh alias": merge, view, set...) e ARGS (o resto).
-# T5: esqueleto vazio; o corpo vem na fase verde.
+# Flag desconhecida é tratada como booleana; a regra de forma da opção B (ERR-003) continua como rede extra nos hooks.
 achar_subcomando() {   # usa TOK (depois de tokenizar_segmento e separar_redirecionamentos)
+  local i=0 j base
   PROG=""; SUB=""; SUB2=""; ARGS=(); FLAGS_GLOBAIS=(); ENV_PREFIXO=(); DIR_GIT=""
+  while ((i < ${#TOK[@]})) && [[ "${TOK[i]}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do
+    ENV_PREFIXO+=("${TOK[i]}"); i=$((i + 1))             # "VAR=valor gh ...": o shell põe VAR no ambiente do gh
+  done
+  ((i < ${#TOK[@]})) || return 0
+  base="${TOK[i]##*/}"                                   # "/usr/bin/gh" vale como "gh"
+  case "$base" in
+    gh | git) PROG="$base" ;;
+    *) return 0 ;;
+  esac
+  j=$((i + 1))
+  _achar_pular_flags
+  if ((j < ${#TOK[@]})); then SUB="${TOK[j]}"; j=$((j + 1)); fi
+  if [[ "$PROG" == gh && ( "$SUB" == pr || "$SUB" == alias ) ]]; then   # 2º nível: "gh pr merge", "gh alias set"
+    _achar_pular_flags
+    if ((j < ${#TOK[@]})) && [[ "${TOK[j]}" != -* ]]; then SUB2="${TOK[j]}"; j=$((j + 1)); fi
+  fi
+  ARGS=("${TOK[@]:j}")
+}
+
+# Flags que levam um valor no token seguinte ("-C dir", "-R dono/repo"). Com "=" ("--git-dir=/x") o valor já vem junto.
+_flag_leva_valor() {   # $1 = programa, $2 = flag
+  case "$1:$2" in
+    git:-C | git:-c | git:--git-dir | git:--work-tree | git:--namespace | git:--config-env | git:--attr-source) return 0 ;;
+    gh:-R | gh:--repo) return 0 ;;
+  esac
+  return 1
+}
+
+# Pula as flags a partir de TOK[j]: guarda cada uma (e o valor dela) em FLAGS_GLOBAIS e avança j.
+# Usa j, TOK e PROG de quem chamou; "-C" também deixa o valor em DIR_GIT.
+_achar_pular_flags() {
+  local f
+  while ((j < ${#TOK[@]})) && [[ "${TOK[j]}" == -* ]]; do
+    f="${TOK[j]}"; FLAGS_GLOBAIS+=("$f"); j=$((j + 1))
+    if [[ "$f" != *=* ]] && _flag_leva_valor "$PROG" "$f" && ((j < ${#TOK[@]})); then
+      FLAGS_GLOBAIS+=("${TOK[j]}")
+      [[ "$f" == -C ]] && DIR_GIT="${TOK[j]}"
+      j=$((j + 1))
+    fi
+  done
 }
