@@ -231,9 +231,73 @@ achar_subcomando() {   # usa TOK (depois de tokenizar_segmento e separar_redirec
 # Entra nos "embrulhos" do comando e deixa em TOK o comando de dentro: env, command, builtin, nohup, time, sudo,
 # xargs (sem flags) e grupo "( ... )" ou "{ ...". Deixa em WRAPPERS o que foi tirado, na ordem. "command -v" só
 # consulta e não executa: não se desembrulha. "xargs" com flags não é desembrulhado e fica em WRAPPER_NAO_SUPORTADO.
-# T6: esqueleto vazio; o corpo vem na fase verde.
 desembrulhar() {   # usa TOK, TOK_CITADO e TOK_MASCARA (depois de separar_redirecionamentos)
+  local -a tok=("${TOK[@]}") cit=("${TOK_CITADO[@]}") msk=("${TOK_MASCARA[@]}")
+  local p w u mudou=1 abriu=0
   WRAPPERS=(); WRAPPER_NAO_SUPORTADO=""
+  while ((mudou && ${#tok[@]} > 0)); do
+    mudou=0
+    # Grupo de comandos: "(" solto no começo da palavra (colado ou não) e "{" sozinho.
+    if [[ "${msk[0]:0:1}" == 0 && "${tok[0]}" == '('* ]]; then
+      tok[0]="${tok[0]:1}"; msk[0]="${msk[0]:1}"
+      if ((${#tok[0]} == 0)); then _desemb_remover 0 1; fi
+      WRAPPERS+=("("); abriu=1; mudou=1; continue
+    fi
+    if [[ "${tok[0]}" == '{' && "${msk[0]}" == 0 ]]; then
+      _desemb_remover 0 1; WRAPPERS+=("{"); mudou=1; continue
+    fi
+    p=0                                                  # o wrapper vem depois de eventuais "VAR=valor"
+    while ((p < ${#tok[@]})) && [[ "${tok[p]}" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; do p=$((p + 1)); done
+    ((p < ${#tok[@]})) || break
+    w="${tok[p]##*/}"
+    case "$w" in
+      env)
+        _desemb_remover "$p" 1
+        while ((p < ${#tok[@]})) && [[ "${tok[p]}" == -* ]]; do
+          case "${tok[p]}" in
+            -u | -C | --unset | --chdir) _desemb_remover "$p" 2 ;;   # opções com valor no token seguinte
+            *) _desemb_remover "$p" 1 ;;                            # -i, -0, -v...: booleanas
+          esac
+        done ;;
+      command)
+        case "${tok[p + 1]:-}" in -v | -V) break ;; esac            # "command -v gh" só consulta: não executa
+        _desemb_remover "$p" 1
+        if [[ "${tok[p]:-}" == -p ]]; then _desemb_remover "$p" 1; fi ;;
+      builtin | nohup) _desemb_remover "$p" 1 ;;
+      time)
+        _desemb_remover "$p" 1
+        if [[ "${tok[p]:-}" == -p ]]; then _desemb_remover "$p" 1; fi ;;
+      sudo)
+        _desemb_remover "$p" 1
+        while ((p < ${#tok[@]})) && [[ "${tok[p]}" == -* ]]; do
+          case "${tok[p]}" in
+            -u | -g | -h | -p | -C | -D | -r | -t | -U | -T | --user | --group | --host | --prompt | --chdir) _desemb_remover "$p" 2 ;;
+            --) _desemb_remover "$p" 1; break ;;
+            *) _desemb_remover "$p" 1 ;;
+          esac
+        done ;;
+      xargs)
+        if [[ "${tok[p + 1]:-}" == -* ]]; then WRAPPER_NAO_SUPORTADO="xargs"; break; fi   # com flags, não sabemos o que ele faz
+        _desemb_remover "$p" 1 ;;
+      *) break ;;
+    esac
+    WRAPPERS+=("$w"); mudou=1
+  done
+  if ((abriu && ${#tok[@]} > 0)); then                   # o ")" que fecha o grupo, colado à última palavra
+    u=$((${#tok[@]} - 1))
+    if [[ "${tok[u]}" == *')' && "${msk[u]: -1}" == 0 ]]; then
+      tok[u]="${tok[u]%)}"; msk[u]="${msk[u]%?}"
+      if ((${#tok[u]} == 0)); then _desemb_remover "$u" 1; fi
+    fi
+  fi
+  TOK=("${tok[@]}"); TOK_CITADO=("${cit[@]}"); TOK_MASCARA=("${msk[@]}")
+}
+
+# Tira $2 palavras a partir da posição $1 de tok, cit e msk (os arrays de quem chamou: ver _divisor_fechar).
+_desemb_remover() {
+  tok=("${tok[@]:0:$1}" "${tok[@]:$(($1 + $2))}")
+  cit=("${cit[@]:0:$1}" "${cit[@]:$(($1 + $2))}")
+  msk=("${msk[@]:0:$1}" "${msk[@]:$(($1 + $2))}")
 }
 
 # Flags que levam um valor no token seguinte ("-C dir", "-R dono/repo"). Com "=" ("--git-dir=/x") o valor já vem junto.
