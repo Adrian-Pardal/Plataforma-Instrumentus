@@ -26,6 +26,12 @@ PR). A branch `feat/divisor-de-comandos` não foi apagada (local nem remota). Fa
 Nada pela metade.
 
 ## Próximo passo
+**Plano 001 PAUSADO de propósito, a pedido do dono (2026-11-21), para priorizar o produto** (DEBT-002 e
+DEBT-003 guardam as brechas). O próximo trabalho é a spec do método de Aceitabilidade TFA (CLAUDE.md §2: sem
+spec aprovada, nada de código). O texto abaixo vale só para QUANDO o plano 001 for retomado. A branch local
+`feat/protect-merge-divisor` guarda o commit vermelho da T8 (a58268d, nunca enviado: 9 casos vermelhos e 6
+guardas; os 4 de flag antes de `api`/`alias` só ficam verdes na T9b, então T8, T9a e T9b vão no MESMO push).
+
 Começar o PR 1b do plano 001 (`protect-merge`): rodar `git fetch`, partir de `origin/develop`, rodar
 `scripts/verify.sh test` e `git status` antes de agir. Primeira task: T8 (testes VERMELHOS dos achados do PR #8
 em `protect-merge.test.sh`: `&` solto, `|&`, flag antes de `api`/`alias`). A T8 e a T9a vão no MESMO push (o hook
