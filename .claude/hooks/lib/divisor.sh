@@ -20,18 +20,18 @@ _divisor_registrar_heredoc() {
   local j=$((i + 2)) tab=0 quoted=0 delim="" ch q
   if [[ "${cmd:j:1}" == '-' ]]; then tab=1; j=$((j + 1)); fi
   while [[ "${cmd:j:1}" == ' ' || "${cmd:j:1}" == $'\t' ]]; do j=$((j + 1)); done
-  ch="${cmd:j:1}"
-  if [[ "$ch" == "'" || "$ch" == '"' ]]; then
-    quoted=1; q="$ch"; j=$((j + 1))
-    while ((j < tam)) && [[ "${cmd:j:1}" != "$q" ]]; do delim+="${cmd:j:1}"; j=$((j + 1)); done
-  else
-    while ((j < tam)); do
-      ch="${cmd:j:1}"
-      case "$ch" in ' ' | $'\t' | $'\n' | ';' | '&' | '|' | '<' | '>' | '(' | ')') break ;; esac
-      if [[ "$ch" == $'\\' ]]; then quoted=1; j=$((j + 1)); ch="${cmd:j:1}"; fi   # "<<\EOF": corpo literal
-      delim+="$ch"; j=$((j + 1))
-    done
-  fi
+  while ((j < tam)); do               # o delimitador é uma palavra: aspas e barras podem aparecer no meio (E"O"F)
+    ch="${cmd:j:1}"
+    case "$ch" in
+      "'" | '"')                        # entre aspas: o shell tira as aspas e fica só o que está dentro
+        quoted=1; q="$ch"; j=$((j + 1))
+        while ((j < tam)) && [[ "${cmd:j:1}" != "$q" ]]; do delim+="${cmd:j:1}"; j=$((j + 1)); done
+        j=$((j + 1)); continue ;;
+      $'\\') quoted=1; j=$((j + 1)); delim+="${cmd:j:1}"; j=$((j + 1)); continue ;;   # "<<\EOF", "<<EO\F"
+      ' ' | $'\t' | $'\n' | ';' | '&' | '|' | '<' | '>' | '(' | ')') break ;;
+    esac
+    delim+="$ch"; j=$((j + 1))
+  done
   hd_delim+=("$delim"); hd_quoted+=("$quoted"); hd_tab+=("$tab")
 }
 
@@ -60,33 +60,58 @@ _divisor_ler_corpos() {
 
 # Divide um comando do shell em segmentos (um por comando) e deixa o resultado em SEGMENTOS.
 # Lê o texto uma letra por vez. Separadores: & && || ; | |& e quebra de linha, fora de aspas.
-# A barra \ protege a letra seguinte (fora de aspas e dentro de aspas duplas, não dentro de aspas simples):
+# A barra \ protege a letra seguinte (fora de aspas, em aspas duplas e em $'...', não em aspas simples):
 # "\;" não separa, "\"" não abre nem fecha aspas, e "\" + quebra de linha continua o comando.
+# Um # no começo de palavra abre comentário até o fim da linha ("echo x # it's" não deixa aspa aberta).
 dividir_comando() {   # $1 = o texto do comando
   # Letra por letra em bytes (LC_ALL=C): em UTF-8 o bash conta caracteres a cada ${cmd:i:1} e fica quadrático
   # (14 KB levava 5,5 s). Só os separadores importam e todos são ASCII; os bytes de acentos passam inteiros.
   local LC_ALL=C
   local cmd="$1" tam="${#1}" i c ant prox atual="" aspa=""
+  local dolar=0 dolar_prev=0 escapou=0 escapou_prev=0 arit=0   # contexto da letra anterior e $((...)) aberto
   local -a hd_delim=() hd_quoted=() hd_tab=()   # heredocs da linha, à espera do corpo (ver _divisor_ler_corpos)
   SEGMENTOS=()
   for ((i = 0; i < tam; i++)); do
     c="${cmd:i:1}"
     prox="${cmd:i+1:1}"                  # a letra seguinte (vazia no fim do texto)
     ant=""; ((i > 0)) && ant="${cmd:i-1:1}"   # a letra anterior (vazia no começo)
+    dolar_prev=$dolar; dolar=0           # a letra anterior foi um "$" solto? (para reconhecer $'...')
+    escapou_prev=$escapou; escapou=0     # a letra anterior foi protegida por barra?
 
     if [[ -n "$aspa" ]]; then            # dentro de aspas: nada separa, só acumula
-      if [[ "$aspa" == '"' && "$c" == $'\\' ]]; then
-        atual+="$c$prox"; i=$((i + 1))   # em aspas duplas, a barra protege a letra seguinte (\")
+      if [[ "$aspa" != "'" && "$c" == $'\\' ]]; then
+        atual+="$c$prox"; i=$((i + 1))   # em aspas duplas e em $'...', a barra protege a letra seguinte
         continue
       fi
       atual+="$c"
-      [[ "$c" == "$aspa" ]] && aspa=""   # achou a aspa que fecha
+      if [[ "$aspa" == "A" ]]; then     # "A" = $'...' (ANSI-C): fecha na aspa simples
+        [[ "$c" == "'" ]] && aspa=""
+      else
+        [[ "$c" == "$aspa" ]] && aspa=""   # achou a aspa que fecha
+      fi
       continue
     fi
 
     case "$c" in
-      $'\\') atual+="$c$prox"; i=$((i + 1)) ;;   # fora de aspas, a barra protege a letra seguinte
-      '"' | "'") aspa="$c"; atual+="$c" ;;   # abriu aspas
+      $'\\') atual+="$c$prox"; i=$((i + 1)); escapou=1 ;;   # fora de aspas, a barra protege a letra seguinte
+      '"') aspa='"'; atual+="$c" ;;                          # abriu aspas duplas
+      "'")
+        if ((dolar_prev)); then aspa="A"; else aspa="'"; fi  # $'...' (ANSI-C) ou aspas simples
+        atual+="$c" ;;
+      '#')
+        if [[ ($escapou_prev -eq 0) && ( -z "$ant" || "$ant" == ' ' || "$ant" == $'\t' || "$ant" == $'\n' \
+          || "$ant" == ';' || "$ant" == '&' || "$ant" == '|' || "$ant" == '(' ) ]]; then
+          while ((i + 1 < tam)) && [[ "${cmd:i+1:1}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: some até a quebra de linha
+        else
+          atual+="$c"                                        # "a#b", "$#": não é comentário
+        fi ;;
+      '$')
+        atual+="$c"; dolar=1
+        if [[ "$prox" == '(' && "${cmd:i+2:1}" == '(' ]]; then
+          atual+="(("; i=$((i + 2)); arit=2; dolar=0         # "$((": aritmética, o "<<" de dentro não é heredoc
+        fi ;;
+      '(') atual+="$c"; if ((arit > 0)); then arit=$((arit + 1)); fi ;;
+      ')') atual+="$c"; if ((arit > 0)); then arit=$((arit - 1)); fi ;;
       ';') _divisor_fechar ;;
       $'\n')
         _divisor_fechar
@@ -95,7 +120,7 @@ dividir_comando() {   # $1 = o texto do comando
       '<')
         atual+="$c"
         # "<<" que não é "<<<" (here-string): heredoc. Guarda o delimitador; o corpo é lido no fim da linha.
-        if [[ "$prox" == '<' && "${cmd:i+2:1}" != '<' && "$ant" != '<' ]]; then _divisor_registrar_heredoc; fi ;;
+        if ((arit == 0)) && [[ "$prox" == '<' && "${cmd:i+2:1}" != '<' && "$ant" != '<' ]]; then _divisor_registrar_heredoc; fi ;;
       '|')
         if [[ "$ant" == '>' ]]; then
           atual+="$c"                                      # ">|" é redirecionamento, não pipe
@@ -135,14 +160,30 @@ _tokenizar_fechar() {
 # fechar) e em MOTIVO (o porquê, ou vazio). As palavras se separam em espaço, tab e quebra de linha.
 tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   local LC_ALL=C   # em bytes, pelo mesmo motivo de dividir_comando
-  local seg="$1" tam="${#1}" i c prox atual="" mascara="" tem=0 citado=0 aspa="" expande=0
+  local seg="$1" tam="${#1}" i c prox atual="" mascara="" tem=0 citado=0 aspa="" expande=0 obscuro=0
+  local dolar=0 dolar_prev=0 escapou=0 escapou_prev=0   # contexto da letra anterior (ver dividir_comando)
   TOK=(); TOK_CITADO=(); TOK_MASCARA=(); ININTERPRETAVEL=0; MOTIVO=""
   for ((i = 0; i < tam; i++)); do
     c="${seg:i:1}"
     prox="${seg:i+1:1}"
+    dolar_prev=$dolar; dolar=0; escapou_prev=$escapou; escapou=0
 
     if [[ "$aspa" == "'" ]]; then        # aspas simples: tudo é literal até a aspa que fecha
       if [[ "$c" == "'" ]]; then aspa=""; else atual+="$c"; mascara+="1"; fi
+    elif [[ "$aspa" == "A" ]]; then      # $'...' (ANSI-C): a barra escreve uma letra especial
+      if [[ "$c" == "'" ]]; then
+        aspa=""
+      elif [[ "$c" == $'\\' ]]; then
+        case "$prox" in
+          $'\\' | "'" | '"') atual+="$prox"; mascara+="1"; i=$((i + 1)) ;;
+          n) atual+=$'\n'; mascara+="1"; i=$((i + 1)) ;;
+          t) atual+=$'\t'; mascara+="1"; i=$((i + 1)) ;;
+          r) atual+=$'\r'; mascara+="1"; i=$((i + 1)) ;;
+          *) atual+="$c"; mascara+="1"; obscuro=1 ;;   # \x70, \101, \u...: não decodificamos; o hook não pode confiar
+        esac
+      else
+        atual+="$c"; mascara+="1"
+      fi
     elif [[ "$aspa" == '"' ]]; then      # aspas duplas: só a barra tem efeito
       if [[ "$c" == '"' ]]; then
         aspa=""
@@ -157,8 +198,16 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
       fi
     else                                 # fora de aspas
       case "$c" in
-        "'" | '"') aspa="$c"; tem=1; citado=1 ;;   # abriu aspas (a palavra existe, mesmo vazia: "")
+        '"') aspa="$c"; tem=1; citado=1 ;;         # abriu aspas duplas (a palavra existe, mesmo vazia: "")
+        "'")
+          if ((dolar_prev)); then                  # $'...': o "$" que acabou de entrar não é da palavra
+            atual="${atual%$}"; mascara="${mascara%?}"; aspa="A"
+          else
+            aspa="'"
+          fi
+          tem=1; citado=1 ;;
         $'\\')
+          escapou=1
           if [[ "$prox" == $'\n' ]]; then
             i=$((i + 1))                           # barra + quebra de linha: continuação, some
           else
@@ -167,8 +216,15 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
             i=$((i + 1))
           fi ;;
         ' ' | $'\t' | $'\n') _tokenizar_fechar ;;
+        '#')
+          if ((tem == 0 && escapou_prev == 0)); then
+            while ((i + 1 < tam)) && [[ "${seg:i+1:1}" != $'\n' ]]; do i=$((i + 1)); done   # comentário: ignora até a quebra
+          else
+            atual+="$c"; mascara+="0"; tem=1         # "a#b": faz parte da palavra
+          fi ;;
         '`') atual+="$c"; mascara+="0"; tem=1; expande=1 ;;           # crase: o shell executa o que está dentro
-        '$') atual+="$c"; mascara+="0"; tem=1; [[ "$prox" == '(' ]] && expande=1 ;;   # "$(": idem
+        '$') atual+="$c"; mascara+="0"; tem=1; dolar=1; [[ "$prox" == '(' ]] && expande=1 ;;   # "$(": idem
+        '<' | '>') atual+="$c"; mascara+="0"; tem=1; [[ "$prox" == '(' ]] && expande=1 ;;      # "<(" e ">(": idem
         *) atual+="$c"; mascara+="0"; tem=1 ;;
       esac
     fi
@@ -176,10 +232,13 @@ tokenizar_segmento() {   # $1 = um segmento (o que dividir_comando entrega)
   _tokenizar_fechar                      # guarda a última palavra
   if [[ -n "$aspa" ]]; then
     ININTERPRETAVEL=1
-    MOTIVO="aspas sem fechar (${aspa})"
+    if [[ "$aspa" == "A" ]]; then MOTIVO="aspas sem fechar (\$')"; else MOTIVO="aspas sem fechar (${aspa})"; fi
   elif ((expande)); then                 # em aspas simples ou com barra não conta: o shell não executa
     ININTERPRETAVEL=1
-    MOTIVO="expansão \$( ou crase: o que roda só se sabe depois do shell"
+    MOTIVO="expansão \$(, crase ou <( >(: o que roda só se sabe depois do shell"
+  elif ((obscuro)); then
+    ININTERPRETAVEL=1
+    MOTIVO="escape de \$'...' que o divisor não decodifica (\\x, \\u, octal...)"
   fi
 }
 
