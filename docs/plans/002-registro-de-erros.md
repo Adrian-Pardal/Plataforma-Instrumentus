@@ -33,11 +33,11 @@ permissões `contents: read` e `issues: write`.
   confirmadas nos trechos da doc consultados → conferir abrindo "New issue" depois do merge.
 
 ## Tasks
-- [ ] T1 [infra] — teste VERMELHO de `abrir-issue-ci.sh`: abre uma issue; não duplica com 1 ou mais abertas;
+- [x] T1 [infra] — teste VERMELHO de `abrir-issue-ci.sh`: abre uma issue; não duplica com 1 ou mais abertas;
   sem `RUN_URL` dá 2; consulta falha dá 1 sem abrir; criar falha dá 1 · Cobre: pedido 4 ·
   Teste: abrir-issue-ci.test.sh (30 min)
-- [ ] T2 [infra] — `scripts/abrir-issue-ci.sh` · Cobre: pedido 4 · Teste: abrir-issue-ci.test.sh (30 min)
-- [ ] T3 [infra] — formulários `bug.yml`, `erro-ia.yml` e `ambiente.yml` em `.github/ISSUE_TEMPLATE/` ·
+- [x] T2 [infra] — `scripts/abrir-issue-ci.sh` · Cobre: pedido 4 · Teste: abrir-issue-ci.test.sh (30 min)
+- [x] T3 [infra] — formulários `bug.yml`, `erro-ia.yml` e `ambiente.yml` em `.github/ISSUE_TEMPLATE/` ·
   Cobre: pedido 2 · Teste: conferência manual em "New issue" (30 min)
 - [ ] T4 [infra] — job `registrar-falha` no `ci.yml` · Cobre: pedido 4 · Teste: actionlint + abrir-issue-ci.test.sh (30 min)
 - [ ] T5 [infra] — frase no CLAUDE.md (§6) e uma linha na skill `registrar-erro` (campo `issue`) · Cobre: pedidos
