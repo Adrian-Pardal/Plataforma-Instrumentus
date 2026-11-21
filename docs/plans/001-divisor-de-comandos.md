@@ -113,7 +113,7 @@ PR 1a (divisor):
   seguinte); `<(` e `>(` marcam ininterpretável como `$(`; heredoc com delimitador de aspas parciais (`<<E"O"F`) e `<<` dentro
   de `$((...))` ou de comentário não é heredoc; testes de `<<"EOF"` e `<<\EOF` · Cobre: D1, D4 ·
   Teste: divisor.test.sh › lexer (90 min)
-- [ ] T7c [infra] — wrappers e palavras reservadas: pular `if then else elif do while until ! exec`; abrir `timeout` (com a duração),
+- [x] T7c [infra] — wrappers e palavras reservadas: pular `if then else elif do while until ! exec`; abrir `timeout` (com a duração),
   `nice -n N`, `stdbuf`, `ionice`, `setsid`, `noglob` e `--` em `command`/`time`; `eval`, `watch`, `find -exec`, `coproc` e
   `parallel` vão para WRAPPER_NAO_SUPORTADO; `env` com `S` em qualquer opção curta (`-iS`); `(` e `)` aparados dos argumentos
   (`--force)`) · Cobre: D3 · Teste: divisor.test.sh › wrappers (90 min)
