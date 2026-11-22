@@ -1,8 +1,8 @@
 # NOME
 titulo-do-pr — o título do PR segue Conventional Commits; como o CI confere e como corrigir
 
-Última verificação: 2026-11-21 · Testado com: scripts/tests/validar-titulo-pr.test.sh (o job no CI ainda não
-foi visto rodando num PR)
+Última verificação: 2026-11-21 · Testado com: scripts/tests/validar-titulo-pr.test.sh e o PR 18 (o job passou
+com título válido e falhou, com a mensagem esperada, com título inválido)
 
 ## PARA QUE SERVE
 O título do PR vira o título do commit de merge (o repositório usa `merge_commit_title = PR_TITLE`). O job

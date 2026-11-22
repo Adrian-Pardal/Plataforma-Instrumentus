@@ -10,15 +10,17 @@
 Um script `scripts/validar-titulo-pr.sh`, testável sem GitHub, recebe o título por variável e diz se segue
 Conventional Commits. O job `titulo-do-pr` do `ci.yml` só chama o script, em `pull_request`. Depois que o
 job existe na `develop`, a proteção da `develop` e da `main` passa a exigi-lo. Por fim, o ADR 0006 registra a
-estratégia de merge e o CLAUDE.md ganha a regra. O padrão é o mesmo do `commit-msg` do lefthook, para o título
+estratégia de merge e o CLAUDE.md ganha a regra. A regex é a mesma do `commit-msg` do lefthook (com uma
+diferença: descrição só de espaços é recusada), para o título
 do PR (que vira o título do commit de merge) e os commits terem a mesma regra.
 
 ## Modelo de dados
 Não se aplica.
 
 ## Interfaces
-`scripts/validar-titulo-pr.sh`: entrada pela variável `TITULO`. Padrão aceito (igual ao do lefthook):
-`^(feat|fix|docs|test|refactor|chore|ci|build|perf)(\([a-z0-9._/-]+\))?!?: .+`, isto é, tipo, escopo
+`scripts/validar-titulo-pr.sh`: entrada pela variável `TITULO`. Padrão aceito (a regex do lefthook, mas com o
+final `.*[^[:space:]]` no lugar de `.+`, para recusar descrição só de espaços):
+`^(feat|fix|docs|test|refactor|chore|ci|build|perf)(\([a-z0-9._/-]+\))?!?: .*[^[:space:]]`, isto é, tipo, escopo
 opcional, `!` opcional (mudança incompatível) e `: ` antes da descrição. Saída: 0 = título válido; 1 = fora do
 padrão (a mensagem mostra o título e o padrão); 2 = faltou `TITULO`.
 Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchronize` e `reopened`; permissões
@@ -27,7 +29,9 @@ Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchroniz
 
 ## Decisões
 - Script testável em vez de regex no YAML (mesmo padrão do plano 002).
-- Mesmo padrão do lefthook, com `!`, que a spec de Conventional Commits permite; o dono não o citou.
+- Mesma regex do lefthook, com `!`, que a spec de Conventional Commits permite (o dono não o citou).
+- Descrição só de espaços é recusada, e o lefthook a aceita (achado 🟡 da revisão do PR 18; sem ela, `feat:   `
+  passava). Só a primeira linha do título conta, como no lefthook.
 - O job fica no `ci.yml`, como pedido. Efeito aceito: `edited` no gatilho reexecuta o CI inteiro quando o
   título é editado (o `concurrency` cancela a execução antiga do PR). Alternativa descartada por ora: um
   workflow separado só para o título.
@@ -50,8 +54,9 @@ Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchroniz
 
 ## Tasks
 - [x] T1 [infra] — teste VERMELHO de `validar-titulo-pr.sh`: aceita `feat: x`, `fix(escopo): x`, `feat!: x`,
-  `chore(deps): x`; recusa título sem tipo, tipo fora da lista, sem espaço depois do `:`, só `feat:`, tipo em
-  maiúscula, vazio (1); sem `TITULO` dá 2 · Cobre: pedido 1 · Teste: validar-titulo-pr.test.sh (30 min)
+  `chore(deps): x`, `feat(a)!: x`, Unicode na descrição; recusa título sem tipo, tipo fora da lista, sem
+  espaço depois do `:`, só `feat:`, tipo em maiúscula, vazio, descrição só de espaços, escopo com Unicode,
+  tipo na 2ª linha (1); sem `TITULO` dá 2 · Cobre: pedido 1 · Teste: validar-titulo-pr.test.sh (30 min)
 - [x] T2 [infra] — `scripts/validar-titulo-pr.sh` · Cobre: pedido 1 · Teste: validar-titulo-pr.test.sh (20 min)
 - [x] T3 [infra] — job `titulo-do-pr` e `types` no `ci.yml` · Cobre: pedido 1 · Teste: actionlint +
   validar-titulo-pr.test.sh + o próprio PR (30 min)
