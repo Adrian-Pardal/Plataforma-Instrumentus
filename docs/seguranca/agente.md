@@ -2,7 +2,7 @@
 
 O agente lê conteúdo que vem de fora (issues, páginas, dependências, respostas de servidores MCP, saídas de
 ferramentas) e roda comandos na sua máquina. Proteger o agente é garantir três coisas: ele não obedece ao que
-leu, não envia dados para fora sem você ver, e só usa servidores MCP que você aprovou. Plano:
+leu, não envia dados para fora pelos comandos comuns de envio sem você ver, e só usa servidores MCP que você aprovou. Plano:
 `docs/plans/004-protecao-do-agente.md`.
 
 Última verificação: 2026-11-22 · Sintaxe das regras conferida na documentação do Claude Code (Context7,
@@ -33,16 +33,25 @@ leu, não envia dados para fora sem você ver, e só usa servidores MCP que voc�
 
 Para ver as regras de confirmação: `jq '.permissions.ask' .claude/settings.json`.
 
+O padrão do Claude Code já é pedir confirmação para o que não está em `allow`. As regras `ask` garantem o
+pedido mesmo que alguém acrescente um `allow` amplo no futuro (o `ask` vence o `allow`, provado na T5).
+
 ## Limites
 O que estas defesas **não** cobrem:
 - **`ask` não é fronteira de segurança.** Ele olha o texto do comando. Não cobre `sh -c "curl …"`,
   `python -c`, `node -e`, variáveis, aliases nem `xargs` com flags (veja `docs/adr/0005-divisor-de-comandos-para-os-hooks.md`
   e `docs/help/ferramentas/merge-de-pr.md`). Quem lê o comando antes de aprovar é você.
+- **O que está em `allow` não passa pelo `ask`.** `./mvnw`, `./gradlew`, `npm run`, `npm test` e
+  `scripts/verify.sh` rodam código do projeto e de dependências, e esse código pode fazer `curl` por dentro.
+  Por isso a regra de dependência nova do `CLAUDE.md` §9 importa: dependência não conferida é código que roda
+  sem pedido.
 - **Modos de permissão.** Nos modos `auto` o pedido pode ser decidido por um classificador, e em
   `bypassPermissions` as checagens são ignoradas (tipos conferidos na documentação do Claude Code).
   Recomendação, não regra: não use esses modos neste projeto sem decidir antes.
 - **`gh api` não está em `ask`.** De propósito: o agente o usa para ler etiquetas e proteções, e pediria
   confirmação a cada leitura. Os merges por `gh api` já são barrados pelo hook `protect-merge`.
+- **A lista de envio é fixa.** Ficam fora do `ask`: `gh issue create`, `gh pr comment`, `yarn publish`,
+  `pnpm publish`, `socat` e `openssl s_client`. Se algum virar uso real do agente, entra na lista (e no teste).
 - **A regra do `CLAUDE.md` depende do agente.** Um texto bem escrito pode convencê-lo; as camadas de permissão
   existem por isso.
 - **Servidor aprovado ainda devolve texto não confiável.** O Context7 está liberado em `allow`
