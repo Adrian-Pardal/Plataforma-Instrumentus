@@ -87,5 +87,38 @@ done < "$RAIZ/docs/skills.md"
 [[ $manuais -gt 0 ]];     confere "achou skills manuais na tabela ($manuais)" "$?"
 [[ $automaticas -gt 0 ]]; confere "achou skills automáticas na tabela ($automaticas)" "$?"
 
+echo "▶ config: proteção do agente (plano 004)"
+# Comandos que enviam dados para fora pedem confirmação (permissions.ask do settings.json). Cada um nas duas
+# formas, "Bash(x)" e "Bash(x *)": não está confirmado que "x *" casa "x" sem argumentos.
+for cmd in curl wget nc ncat netcat telnet ssh scp sftp rsync "npm publish" "gh gist"; do
+  for regra in "Bash($cmd)" "Bash($cmd *)"; do
+    jq -e --arg r "$regra" '.permissions.ask | index($r) != null' "$RAIZ/.claude/settings.json" >/dev/null 2>&1
+    confere "settings.json pede confirmação para $regra" "$?"
+  done
+  # Um "allow" desses comandos anularia o espírito da regra (o ask vence, mas não deve haver o conflito).
+  jq -e --arg c "$cmd" '[.permissions.allow[] | select(. == "Bash(" + $c + ")" or startswith("Bash(" + $c + " "))] | length == 0' \
+    "$RAIZ/.claude/settings.json" >/dev/null 2>&1
+  confere "settings.json não libera '$cmd' em allow" "$?"
+done
+
+AGENTE="$RAIZ/docs/seguranca/agente.md"
+[[ -f "$AGENTE" ]]; confere "docs/seguranca/agente.md existe" "$?"
+for secao in "## Riscos" "## Defesas" "## Limites" "## Servidores MCP aprovados"; do
+  grep -qxF "$secao" "$AGENTE" 2>/dev/null; confere "agente.md tem a seção '$secao'" "$?"
+done
+
+# A lista de servidores MCP aprovados é a seção "Servidores MCP aprovados" do agente.md.
+aprovados="$(awk '/^## Servidores MCP aprovados/ {f = 1; next} /^## / {f = 0} f' "$AGENTE" 2>/dev/null)"
+servidores=0
+while IFS= read -r servidor; do
+  servidores=$((servidores + 1))
+  grep -qF "\`$servidor\`" <<<"$aprovados"; confere "servidor MCP '$servidor' do .mcp.json está aprovado em agente.md" "$?"
+done < <(jq -r '.mcpServers | keys[]' "$RAIZ/.mcp.json")
+[[ $servidores -gt 0 ]]; confere "achou servidores no .mcp.json ($servidores)" "$?"
+# O settings.json só libera (allow) ferramentas de servidor MCP aprovado.
+while IFS= read -r nome; do
+  grep -qF "\`$nome\`" <<<"$aprovados"; confere "allow de mcp__${nome}__* é de servidor aprovado" "$?"
+done < <(jq -r '.permissions.allow[] | select(startswith("mcp__")) | split("__")[1]' "$RAIZ/.claude/settings.json")
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
