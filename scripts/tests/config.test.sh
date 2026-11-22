@@ -123,8 +123,22 @@ for amplo in 'Bash(*)' 'Bash' 'Bash(curl*)' 'Bash(c* *)'; do
   [[ -n "$(allow_libera_envio "$TMP/amplo.json")" ]]; confere "allow amplo '$amplo' é pego pelo teste" "$?"
 done
 printf '{"permissions":{"allow":["Bash(git status *)"]}}' > "$TMP/estreito.json"
-[[ -z "$(allow_libera_envio "$TMP/estreito.json")" ]]; confere "allow estreito (git status) não é pego" "$?"
-[[ -z "$(allow_libera_envio "$RAIZ/.claude/settings.json")" ]]; confere "settings.json não tem allow que cubra comando de envio" "$?"
+saida="$(allow_libera_envio "$TMP/estreito.json")"; rc=$?
+[[ $rc -eq 0 && -z "$saida" ]]; confere "allow estreito (git status) não é pego" "$?"
+saida="$(allow_libera_envio "$RAIZ/.claude/settings.json")"; rc=$?
+[[ $rc -eq 0 && -z "$saida" ]]; confere "settings.json não tem allow que cubra comando de envio" "$?"
+
+# sintaxe antiga de prefixo (curl:*) também precisa ser pega
+jq -n '{permissions: {allow: ["Bash(curl:*)"]}}' > "$TMP/prefixo.json"
+[[ -n "$(allow_libera_envio "$TMP/prefixo.json")" ]]; confere "allow 'Bash(curl:*)' é pego pelo teste" "$?"
+
+# jq quebrado ou sem allow: JSON inválido tem de falhar; sem allow é seguro (vazio, rc 0)
+printf '{ isto não é json' > "$TMP/invalido.json"
+allow_libera_envio "$TMP/invalido.json" >/dev/null 2>&1; [[ $? -ne 0 ]]
+confere "JSON inválido faz allow_libera_envio falhar (não passa em silêncio)" "$?"
+printf '{"permissions":{}}' > "$TMP/sem-allow.json"
+saida="$(allow_libera_envio "$TMP/sem-allow.json")"; rc=$?
+[[ $rc -eq 0 && -z "$saida" ]]; confere "settings sem allow: nada liberado, sem erro" "$?"
 
 AGENTE="$RAIZ/docs/seguranca/agente.md"
 [[ -f "$AGENTE" ]]; confere "docs/seguranca/agente.md existe" "$?"
