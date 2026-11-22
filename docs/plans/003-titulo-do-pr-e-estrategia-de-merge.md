@@ -49,11 +49,11 @@ Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchroniz
 - O CLAUDE.md está com 62 linhas (limite 60 citado nas skills): mostrar o que enxugar antes de acrescentar.
 
 ## Tasks
-- [ ] T1 [infra] — teste VERMELHO de `validar-titulo-pr.sh`: aceita `feat: x`, `fix(escopo): x`, `feat!: x`,
+- [x] T1 [infra] — teste VERMELHO de `validar-titulo-pr.sh`: aceita `feat: x`, `fix(escopo): x`, `feat!: x`,
   `chore(deps): x`; recusa título sem tipo, tipo fora da lista, sem espaço depois do `:`, só `feat:`, tipo em
   maiúscula, vazio (1); sem `TITULO` dá 2 · Cobre: pedido 1 · Teste: validar-titulo-pr.test.sh (30 min)
-- [ ] T2 [infra] — `scripts/validar-titulo-pr.sh` · Cobre: pedido 1 · Teste: validar-titulo-pr.test.sh (20 min)
-- [ ] T3 [infra] — job `titulo-do-pr` e `types` no `ci.yml` · Cobre: pedido 1 · Teste: actionlint +
+- [x] T2 [infra] — `scripts/validar-titulo-pr.sh` · Cobre: pedido 1 · Teste: validar-titulo-pr.test.sh (20 min)
+- [x] T3 [infra] — job `titulo-do-pr` e `types` no `ci.yml` · Cobre: pedido 1 · Teste: actionlint +
   validar-titulo-pr.test.sh + o próprio PR (30 min)
 - [ ] T4 [infra] — help: página `docs/help/ferramentas/titulo-do-pr.md`, atualizar `ci.md`,
   `protecao-de-branches.md` e o índice do help · Cobre: pedidos 1 e 2 · Teste: leitura (30 min)
