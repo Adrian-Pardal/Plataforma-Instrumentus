@@ -18,11 +18,21 @@
 # O que o "ask" do settings.json cobre e não cobre: ver docs/help/ferramentas/merge-de-pr.md.
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
-bloquear() { echo "🚫 protect-merge: $1" >&2; exit 2; }
+# Registro de eventos para a pesquisa (plano 005). Se a lib faltar, o hook bloqueia igual, só sem registrar.
+# shellcheck source=/dev/null  # a lib é conferida à parte pelo verify.sh (.claude/hooks/lib/*.sh)
+source "${BASH_SOURCE[0]%/*}/lib/eventos.sh" 2>/dev/null || registrar_evento() { :; }
 
-command -v jq >/dev/null || bloquear "jq não encontrado; não consegui ler o comando, então bloqueio por segurança."
+# bloquear <mensagem> <código do motivo> [alvo]: registra o evento e sai com 2. O registro nunca muda o código
+# de saída nem o stderr; a lógica de quando bloquear está toda fora daqui.
+# O alvo é só a branch base do PR. Nunca o número, a URL ou o texto do comando: uma URL pode ter credencial.
+bloquear() {
+  registrar_evento bloqueio protect-merge "${2:-desconhecido}" "${3:-}"
+  echo "🚫 protect-merge: $1" >&2; exit 2
+}
+
+command -v jq >/dev/null || bloquear "jq não encontrado; não consegui ler o comando, então bloqueio por segurança." jq-ausente
 ENTRADA=$(cat)
-CMD=$(jq -r '.tool_input.command // empty' <<<"$ENTRADA") || bloquear "entrada JSON inválida."
+CMD=$(jq -r '.tool_input.command // empty' <<<"$ENTRADA") || bloquear "entrada JSON inválida." entrada-invalida
 [[ -n "$CMD" ]] || exit 0
 
 CWD=$(jq -r '.cwd // empty' <<<"$ENTRADA")
@@ -82,7 +92,7 @@ tirar_redirecionamentos() {   # lê TOK e deixa nele o resultado
 analisar_api() {   # $1 = o segmento inteiro, sem aspas
   local re_rest='pulls/[^[:space:]]*/merge'
   if [[ "$1" =~ $re_rest || "$1" == *mergePullRequest* || "$1" == *enablePullRequestAutoMerge* ]]; then
-    bloquear "merge por 'gh api' não é permitido; use 'gh pr merge --merge' em PR da develop."
+    bloquear "merge por 'gh api' não é permitido; use 'gh pr merge --merge' em PR da develop." merge-por-api
   fi
 }
 
@@ -92,9 +102,9 @@ analisar_merge() {   # $1 = pasta onde o gh roda; demais = argumentos depois de 
   while [[ $# -gt 0 ]]; do
     A="$1"; shift
     case "$A" in
-      --admin|--admin=*) bloquear "--admin não é permitido (passa por cima das regras de proteção)." ;;
-      --auto|--auto=*)   bloquear "--auto não é permitido (o merge aconteceria depois, sem você pedir)." ;;
-      --squash|--squash=*|--rebase|--rebase=*) bloquear "só é permitido merge commit (--merge); '$A' não." ;;
+      --admin|--admin=*) bloquear "--admin não é permitido (passa por cima das regras de proteção)." merge-admin ;;
+      --auto|--auto=*)   bloquear "--auto não é permitido (o merge aconteceria depois, sem você pedir)." merge-auto ;;
+      --squash|--squash=*|--rebase|--rebase=*) bloquear "só é permitido merge commit (--merge); '$A' não." merge-squash-ou-rebase ;;
       --merge|--merge=true) MERGE=1 ;;
       --repo=*) REPO="${A#--repo=}" ;;
       --repo) REPO="${1:-}"; shift || true ;;
@@ -104,7 +114,7 @@ analisar_merge() {   # $1 = pasta onde o gh roda; demais = argumentos depois de 
         for ((i = 1; i < ${#A}; i++)); do
           L="${A:i:1}"
           case "$L" in
-            s|r) bloquear "só é permitido merge commit (--merge); '-$L' não." ;;
+            s|r) bloquear "só é permitido merge commit (--merge); '-$L' não." merge-squash-ou-rebase ;;
             m) MERGE=1 ;;
             d) ;;
             [$CURTAS_COM_VALOR])
@@ -116,14 +126,14 @@ analisar_merge() {   # $1 = pasta onde o gh roda; demais = argumentos depois de 
                 shift || true
               fi
               break ;;
-            *) bloquear "opção desconhecida '-$L' em 'gh pr merge'; bloqueio por segurança." ;;
+            *) bloquear "opção desconhecida '-$L' em 'gh pr merge'; bloqueio por segurança." opcao-desconhecida ;;
           esac
         done ;;
       *) ALVO="$A" ;;                              # número, URL ou nome da branch do PR
     esac
   done
 
-  [[ "$MERGE" == 1 ]] || bloquear "use 'gh pr merge --merge' (merge commit)."
+  [[ "$MERGE" == 1 ]] || bloquear "use 'gh pr merge --merge' (merge commit)." sem-merge-commit
 
   # Pergunta ao GitHub para onde o PR vai. Sem ALVO, o gh usa o PR da branch atual (igual ao "gh pr merge").
   local -a ARGS=(pr view)
@@ -131,8 +141,8 @@ analisar_merge() {   # $1 = pasta onde o gh roda; demais = argumentos depois de 
   [[ -z "$REPO" ]] || ARGS+=(-R "$REPO")
   ARGS+=(--json baseRefName --jq .baseRefName)
   local BASE
-  BASE=$(cd "$DIR" && gh "${ARGS[@]}" 2>/dev/null) || bloquear "não consegui consultar o destino do PR com 'gh pr view'; bloqueio por segurança."
-  [[ "$BASE" == "develop" ]] || bloquear "o PR mira '${BASE:-?}'. Só é permitido merge em 'develop'; merge na 'main' é só do dono."
+  BASE=$(cd "$DIR" && gh "${ARGS[@]}" 2>/dev/null) || bloquear "não consegui consultar o destino do PR com 'gh pr view'; bloqueio por segurança." consulta-pr-falhou
+  [[ "$BASE" == "develop" ]] || bloquear "o PR mira '${BASE:-?}'. Só é permitido merge em 'develop'; merge na 'main' é só do dono." base-nao-permitida "$BASE"
 }
 
 # Um texto entre aspas ("texto --squash") é UM argumento: troca os espaços de dentro por \x01, tira as aspas
@@ -159,13 +169,13 @@ verificar_forma() {   # lê TOK e i
   local T
   [[ "${TOK[$((i+1))]:-}" == pr && "${TOK[$((i+2))]:-}" == merge ]] && return 0
   for T in "${TOK[@]:$((i+1))}"; do
-    [[ "$T" == merge ]] && bloquear "'merge' num comando gh só é aceito como 'gh pr merge ...' (opções como -R vão depois): qualquer outra forma é bloqueada por segurança."
+    [[ "$T" == merge ]] && bloquear "'merge' num comando gh só é aceito como 'gh pr merge ...' (opções como -R vão depois): qualquer outra forma é bloqueada por segurança." forma-nao-canonica
   done
 }
 
 analisar_alias() {   # lê TOK e i
   case "${TOK[$((i+2))]:-}" in
-    set | import) bloquear "'gh alias set/import' não é permitido: um alias pode esconder um 'pr merge --squash'." ;;
+    set | import) bloquear "'gh alias set/import' não é permitido: um alias pode esconder um 'pr merge --squash'." alias-set-import ;;
   esac
 }
 
@@ -174,7 +184,7 @@ verificar_prefixo() {   # lê TOK e i
   local k
   for ((k = 0; k < i; k++)); do
     case "${TOK[$k]}" in
-      GH_REPO=* | GH_HOST=*) bloquear "GH_REPO/GH_HOST antes de 'gh pr merge' não é permitido: o destino do PR seria consultado no repositório errado." ;;
+      GH_REPO=* | GH_HOST=*) bloquear "GH_REPO/GH_HOST antes de 'gh pr merge' não é permitido: o destino do PR seria consultado no repositório errado." prefixo-gh-repo-host ;;
     esac
   done
 }
@@ -182,7 +192,7 @@ verificar_prefixo() {   # lê TOK e i
 # ERR-003 (opção B): o shell pode expandir $, crase e \ para uma opção proibida; o hook não vê o resultado.
 verificar_expansoes() {   # lê SEG_ORIGINAL
   case "$SEG_ORIGINAL" in
-    *'$'* | *'`'* | *\\* | *'{'*) bloquear "'gh pr merge' com \$, crase, \\ ou { não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso; para um texto com esses caracteres, use --body-file." ;;
+    *'$'* | *'`'* | *\\* | *'{'*) bloquear "'gh pr merge' com \$, crase, \\ ou { não é permitido: o shell pode expandir isso para --squash ou --auto, e o hook só lê o texto. Escreva a opção por extenso; para um texto com esses caracteres, use --body-file." expansao-no-comando ;;
   esac
 }
 

@@ -186,6 +186,51 @@ roda_hook protect-push "$(json_bash "git push https://TOKEN_SECRETO_999@exemplo.
 bloqueou "push para URL com credencial" protect-push remoto-nao-permitido ""
 sem_o_texto "TOKEN_SECRETO_999" "credencial na URL do remoto não vai para o evento"
 
+echo "▶ protect-merge grava o evento"
+projeto pm
+# "gh" falso: só responde ao "gh pr view" que o hook faz para saber a base do PR (FAKE_BASE e FAKE_RC controlam a resposta).
+mkdir -p "$TMP/fakegh"
+printf '%s\n' '#!/usr/bin/env bash' 'case "$*" in "pr view"*) echo "${FAKE_BASE:-develop}"; exit "${FAKE_RC:-0}" ;; esac' > "$TMP/fakegh/gh"
+chmod +x "$TMP/fakegh/gh"
+merge() { PATH="$TMP/fakegh:$PATH" FAKE_BASE="${FAKE_BASE:-develop}" FAKE_RC="${FAKE_RC:-0}" roda_hook protect-merge "$(json_bash "$1")"; }
+merge "gh pr merge 1 --merge --admin"
+bloqueou "merge --admin" protect-merge merge-admin ""
+merge "gh pr merge 1 --merge --auto"
+bloqueou "merge --auto" protect-merge merge-auto ""
+merge "gh pr merge 1 --squash"
+bloqueou "merge --squash" protect-merge merge-squash-ou-rebase ""
+merge "gh pr merge 1 -s"
+bloqueou "merge -s" protect-merge merge-squash-ou-rebase ""
+merge "gh pr merge 1 -x"
+bloqueou "merge com opção curta desconhecida" protect-merge opcao-desconhecida ""
+merge "gh pr merge 1"
+bloqueou "merge sem --merge" protect-merge sem-merge-commit ""
+merge "gh api -X PUT repos/o/r/pulls/1/merge"
+bloqueou "merge por gh api" protect-merge merge-por-api ""
+FAKE_BASE=main merge "gh pr merge 1 --merge"
+bloqueou "PR que mira a main" protect-merge base-nao-permitida "main"
+FAKE_RC=1 merge "gh pr merge 1 --merge"
+bloqueou "gh pr view falhou" protect-merge consulta-pr-falhou ""
+merge "gh -R o/r pr merge 1 --merge"
+bloqueou "forma não canônica" protect-merge forma-nao-canonica ""
+merge "gh alias set m x"
+bloqueou "gh alias set" protect-merge alias-set-import ""
+merge "GH_REPO=o/r gh pr merge 1 --merge"
+bloqueou "GH_REPO no prefixo" protect-merge prefixo-gh-repo-host ""
+merge 'gh pr merge 1 --merge --body "$X"'
+bloqueou "\$ no comando" protect-merge expansao-no-comando ""
+roda_hook protect-merge "não é json"
+bloqueou "entrada que não é JSON" protect-merge entrada-invalida ""
+merge "gh pr merge 1 --merge"
+liberou "merge --merge em PR da develop"
+merge "ls -la"
+liberou "comando que não é gh"
+merge "gh pr view 1"
+liberou "gh que não é merge"
+merge "gh pr merge --squash https://TOKEN_PR_321@exemplo.com/o/r/pull/1"
+bloqueou "merge --squash com URL de credencial" protect-merge merge-squash-ou-rebase ""
+sem_o_texto "TOKEN_PR_321" "credencial na URL do PR não vai para o evento"
+
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de eventos falharam" >&2
   exit 1
