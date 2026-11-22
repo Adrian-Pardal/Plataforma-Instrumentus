@@ -87,5 +87,80 @@ done < "$RAIZ/docs/skills.md"
 [[ $manuais -gt 0 ]];     confere "achou skills manuais na tabela ($manuais)" "$?"
 [[ $automaticas -gt 0 ]]; confere "achou skills automáticas na tabela ($automaticas)" "$?"
 
+# Imprime cada comando de envio que algum "allow" do arquivo libera. O padrão do allow é lido como glob do
+# bash ("*" casa qualquer coisa), então "Bash(*)", "Bash(curl*)" e "Bash(c* *)" são pegos. "$cmd x" cobre o
+# padrão com argumento ("curl *").
+ENVIO=(curl wget nc ncat netcat telnet ssh scp sftp rsync "npm publish" "gh gist")
+allow_libera_envio() {   # allow_libera_envio <settings.json>
+  local regras regra padrao cmd
+  regras="$(jq -r '(.permissions.allow // [])[]' "$1")" || return 2   # jq quebrado = falha, não "vazio"
+  while IFS= read -r regra; do
+    if   [[ "$regra" == "Bash" ]];      then padrao='*'
+    elif [[ "$regra" == "Bash("*")" ]]; then padrao="${regra#Bash(}"; padrao="${padrao%)}"
+    else continue; fi
+    padrao="${padrao/:\*/ *}"   # sintaxe antiga de prefixo: "curl:*" vira "curl *"
+    for cmd in "${ENVIO[@]}"; do
+      # shellcheck disable=SC2053  # glob de propósito: o padrão fica sem aspas
+      if [[ "$cmd" == $padrao || "$cmd x" == $padrao ]]; then echo "$cmd"; fi
+    done
+  done <<<"$regras"
+}
+
+echo "▶ config: proteção do agente (plano 004)"
+# Comandos que enviam dados para fora pedem confirmação (permissions.ask do settings.json). Cada um nas duas
+# formas, "Bash(x)" e "Bash(x *)": não está confirmado que "x *" casa "x" sem argumentos.
+for cmd in "${ENVIO[@]}"; do
+  for regra in "Bash($cmd)" "Bash($cmd *)"; do
+    jq -e --arg r "$regra" '.permissions.ask | index($r) != null' "$RAIZ/.claude/settings.json" >/dev/null 2>&1
+    confere "settings.json pede confirmação para $regra" "$?"
+  done
+  # Um "allow" desses comandos anularia o espírito da regra (o ask vence, mas não deve haver o conflito).
+  jq -e --arg c "$cmd" '[.permissions.allow[] | select(. == "Bash(" + $c + ")" or startswith("Bash(" + $c + " "))] | length == 0' \
+    "$RAIZ/.claude/settings.json" >/dev/null 2>&1
+  confere "settings.json não libera '$cmd' em allow" "$?"
+done
+
+for amplo in 'Bash(*)' 'Bash' 'Bash(curl*)' 'Bash(c* *)'; do
+  jq -n --arg r "$amplo" '{permissions: {allow: [$r]}}' > "$TMP/amplo.json"
+  [[ -n "$(allow_libera_envio "$TMP/amplo.json")" ]]; confere "allow amplo '$amplo' é pego pelo teste" "$?"
+done
+printf '{"permissions":{"allow":["Bash(git status *)"]}}' > "$TMP/estreito.json"
+saida="$(allow_libera_envio "$TMP/estreito.json")"; rc=$?
+[[ $rc -eq 0 && -z "$saida" ]]; confere "allow estreito (git status) não é pego" "$?"
+saida="$(allow_libera_envio "$RAIZ/.claude/settings.json")"; rc=$?
+[[ $rc -eq 0 && -z "$saida" ]]; confere "settings.json não tem allow que cubra comando de envio" "$?"
+
+# sintaxe antiga de prefixo (curl:*) também precisa ser pega
+jq -n '{permissions: {allow: ["Bash(curl:*)"]}}' > "$TMP/prefixo.json"
+[[ -n "$(allow_libera_envio "$TMP/prefixo.json")" ]]; confere "allow 'Bash(curl:*)' é pego pelo teste" "$?"
+
+# jq quebrado ou sem allow: JSON inválido tem de falhar; sem allow é seguro (vazio, rc 0)
+printf '{ isto não é json' > "$TMP/invalido.json"
+allow_libera_envio "$TMP/invalido.json" >/dev/null 2>&1 && rc=0 || rc=$?
+[[ $rc -ne 0 ]]
+confere "JSON inválido faz allow_libera_envio falhar (não passa em silêncio)" "$?"
+printf '{"permissions":{}}' > "$TMP/sem-allow.json"
+saida="$(allow_libera_envio "$TMP/sem-allow.json")"; rc=$?
+[[ $rc -eq 0 && -z "$saida" ]]; confere "settings sem allow: nada liberado, sem erro" "$?"
+
+AGENTE="$RAIZ/docs/seguranca/agente.md"
+[[ -f "$AGENTE" ]]; confere "docs/seguranca/agente.md existe" "$?"
+for secao in "## Riscos" "## Defesas" "## Limites" "## Servidores MCP aprovados"; do
+  grep -qxF "$secao" "$AGENTE" 2>/dev/null; confere "agente.md tem a seção '$secao'" "$?"
+done
+
+# A lista de servidores MCP aprovados é a seção "Servidores MCP aprovados" do agente.md.
+aprovados="$(awk '/^## Servidores MCP aprovados/ {f = 1; next} /^## / {f = 0} f' "$AGENTE" 2>/dev/null)"
+servidores=0
+while IFS= read -r servidor; do
+  servidores=$((servidores + 1))
+  grep -qF "\`$servidor\`" <<<"$aprovados"; confere "servidor MCP '$servidor' do .mcp.json está aprovado em agente.md" "$?"
+done < <(jq -r '.mcpServers | keys[]' "$RAIZ/.mcp.json")
+[[ $servidores -gt 0 ]]; confere "achou servidores no .mcp.json ($servidores)" "$?"
+# O settings.json só libera (allow) ferramentas de servidor MCP aprovado.
+while IFS= read -r nome; do
+  grep -qF "\`$nome\`" <<<"$aprovados"; confere "allow de mcp__${nome}__* é de servidor aprovado" "$?"
+done < <(jq -r '.permissions.allow[] | select(startswith("mcp__")) | split("__")[1]' "$RAIZ/.claude/settings.json")
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
