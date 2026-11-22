@@ -180,5 +180,29 @@ grep -qF 'docs/estudo-de-caso/sessoes/' "$HANDOFF"; confere "a skill handoff gra
 grep -qF 'ferramentas/coleta-por-fase.md' "$RAIZ/docs/help/README.md"; confere "o índice do help lista coleta-por-fase.md" "$?"
 grep -qF 'scripts/pesquisa/coletar-fase.sh' "$RAIZ/docs/estudo-de-caso/protocolo.md"; confere "o protocolo cita scripts/pesquisa/coletar-fase.sh" "$?"
 
+echo "▶ config: estrutura de docs (Fase 3)"
+# O mapa geral existe e cita TODA pasta de docs/; toda pasta tem README.md de índice (pasta nova sem índice reprova).
+[[ -f "$RAIZ/docs/README.md" ]]; confere "existe docs/README.md" "$?"
+for pasta in "$RAIZ"/docs/*/; do
+  nome="$(basename "$pasta")"
+  [[ -f "$pasta/README.md" ]]; confere "docs/$nome/ tem README.md" "$?"
+  grep -qF "$nome/" "$RAIZ/docs/README.md"; confere "docs/README.md cita $nome/" "$?"
+done
+# O cabeçalho padrão existe e os templates começam com ele (o erro.md já tinha frontmatter: ganha o status-doc).
+[[ -f "$RAIZ/docs/templates/cabecalho.md" ]]; confere "existe docs/templates/cabecalho.md" "$?"
+for modelo in adr erro handoff help plan spec; do
+  [[ "$(head -1 "$RAIZ/docs/templates/$modelo.md")" == "---" ]]; confere "o template $modelo.md começa com o cabeçalho (---)" "$?"
+  grep -q '^mantido-por:' "$RAIZ/docs/templates/$modelo.md"; confere "o template $modelo.md tem o campo mantido-por" "$?"
+done
+grep -q '^status-doc:' "$RAIZ/docs/templates/erro.md"; confere "o template erro.md usa status-doc (o status: é o do ciclo do erro)" "$?"
+# Os documentos novos da pesquisa nasceram com o cabeçalho (os antigos não são migrados).
+for doc in docs/help/ferramentas/telemetria.md docs/help/ferramentas/eventos-do-harness.md docs/help/ferramentas/coleta-por-fase.md \
+           docs/plans/005-registro-de-eventos-do-harness.md docs/plans/006-coleta-de-dados-por-fase.md \
+           docs/estudo-de-caso/protocolo.md docs/estudo-de-caso/sessoes/README.md docs/estudo-de-caso/dados/README.md; do
+  [[ "$(head -1 "$RAIZ/$doc")" == "---" ]]; confere "$doc começa com o cabeçalho" "$?"
+done
+grep -q '^## 10\. Documentação' "$RAIZ/CLAUDE.md"; confere "o CLAUDE.md tem a seção 10 (Documentação)" "$?"
+grep -qF 'templates/cabecalho.md' "$HANDOFF"; confere "a skill handoff manda usar o cabeçalho padrão no registro da sessão" "$?"
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
