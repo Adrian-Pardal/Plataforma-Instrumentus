@@ -61,7 +61,7 @@ os merges por `gh api` já são barrados pelo hook `protect-merge`).
   config.test.sh + leitura (45 min)
 - [x] T4 [docs] — seção de segurança no CLAUDE.md com as duas regras do dono · Cobre: pedido 1 · Teste: leitura
   (15 min)
-- [ ] T5 [infra] — demonstração do `curl`: (a) `curl --version` pede confirmação; (b) com `Bash(curl *)`
+- [x] T5 [infra] — demonstração do `curl`: (a) `curl --version` pede confirmação; (b) com `Bash(curl *)`
   acrescentado temporariamente ao `.claude/settings.local.json` do dono (arquivo pessoal, fora do git), o pedido
   continua; depois remover · Cobre: teste pedido · Teste: o dono vê o pedido na tela; o Claude relata (20 min)
 
