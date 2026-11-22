@@ -24,6 +24,7 @@ transversal.
 | [atualizar-docs](../.claude/skills/atualizar-docs/SKILL.md) | transversal | manual | Para auditar a saúde da documentação (cabeçalhos, links, índices, órfãos, frescor) e receber uma tabela de pendências antes de corrigir (`/atualizar-docs`) |
 | [documentar-tecnologia](../.claude/skills/documentar-tecnologia/SKILL.md) | transversal | automática | Depois que uma tecnologia foi decidida em ADR e entrou no projeto, ou quando a versão ou o uso mudarem (`/documentar-tecnologia <tecnologia>`) |
 | [estrategia-testes](../.claude/skills/estrategia-testes/SKILL.md) | transversal | manual | Para definir ou mudar a estratégia de testes (pirâmide, ferramentas, metas) ou atualizar as métricas de qualidade a partir dos relatórios reais (`/estrategia-testes`) |
+| [casos-de-teste](../.claude/skills/casos-de-teste/SKILL.md) | plano | automática | Depois do plano de uma feature, ou quando um critério de aceite ficar sem caso de teste (a `implementar-tdd` a aciona); também `/casos-de-teste <feature>` |
 
 ## Subagentes
 
