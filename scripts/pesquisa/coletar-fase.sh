@@ -206,7 +206,13 @@ coletar_intervencoes
 coletar_bloqueios
 
 DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
-mkdir -p "${DESTINO%/*}"
-{ echo "fase,inicio,fim,metrica,detalhe,valor,nota"; printf '%s\n' "${LINHAS[@]}"; } > "$DESTINO.tmp" && mv "$DESTINO.tmp" "$DESTINO"
+mkdir -p "${DESTINO%/*}" 2>/dev/null || erro "não consegui criar a pasta ${DESTINO%/*}"
+# Grava num .tmp e só então troca pelo nome final: se algo falhar, o csv antigo (se havia) fica como estava e o
+# .tmp é apagado. O "✔ gravado" abaixo só aparece depois que as duas etapas deram certo.
+if ! { echo "fase,inicio,fim,metrica,detalhe,valor,nota"; printf '%s\n' "${LINHAS[@]}"; } > "$DESTINO.tmp" 2>/dev/null \
+   || ! mv "$DESTINO.tmp" "$DESTINO" 2>/dev/null; then
+  rm -f "$DESTINO.tmp"
+  erro "não consegui gravar ${DESTINO#"$RAIZ"/}"
+fi
 echo "• intervalo usado (UTC): $INI_UTC a $FIM_UTC"
 echo "✔ gravado: ${DESTINO#"$RAIZ"/}"
