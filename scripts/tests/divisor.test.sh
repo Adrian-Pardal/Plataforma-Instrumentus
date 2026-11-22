@@ -69,16 +69,23 @@ caso_segmentos "continuação de linha (\ + quebra) não separa" $'ls \\\n-la'  
 
 # Desempenho: o hook roda em TODO comando Bash. Medido antes da correção: 14 KB levava 5,5 s (quadrático).
 # O limite é folgado de propósito (3 s), para não falhar em máquina lenta.
+# Cada caso vale a MELHOR de até 3 execuções (para na primeira que cabe no limite): o relógio da máquina oscila
+# (um caso de 1,0 s já deu 2,09 s), mas uma regressão quadrática real passaria do limite em TODAS as tentativas.
 caso_desempenho() {   # caso_desempenho <descrição> <repetições> <limite em ms>
-  local descricao="$1" n="$2" limite_ms="$3" cmd="" k ini fim ms
+  local descricao="$1" n="$2" limite_ms="$3" cmd="" k t ini fim ms melhor="" sufixo=""
   for ((k = 0; k < n; k++)); do cmd+='echo "x;y" && '; done
   cmd+="ls"
-  ini=${EPOCHREALTIME/./}; dividir_comando "$cmd"; fim=${EPOCHREALTIME/./}
-  ms=$(((fim - ini) / 1000))
-  if [[ ${#SEGMENTOS[@]} -eq $((n + 1)) && $ms -le $limite_ms ]]; then
-    echo "  ok    $descricao (${ms} ms)"
+  for t in 1 2 3; do
+    ini=${EPOCHREALTIME/./}; dividir_comando "$cmd"; fim=${EPOCHREALTIME/./}
+    ms=$(((fim - ini) / 1000))
+    if [[ -z $melhor ]] || ((ms < melhor)); then melhor=$ms; fi
+    if ((melhor <= limite_ms)); then break; fi
+  done
+  if ((t > 1)); then sufixo=", melhor de $t tentativas"; fi
+  if [[ ${#SEGMENTOS[@]} -eq $((n + 1)) && $melhor -le $limite_ms ]]; then
+    echo "  ok    $descricao (${melhor} ms${sufixo})"
   else
-    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmentos (esperado $((n + 1))) em ${ms} ms (limite ${limite_ms} ms)" >&2
+    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmentos (esperado $((n + 1))) em ${melhor} ms, melhor de $t tentativas (limite ${limite_ms} ms)" >&2
     falhas=$((falhas + 1))
   fi
 }
@@ -532,18 +539,24 @@ caso_falha_fechada_sem "PROTEGIDOS vazia"                $'git commit -m "$(date
 caso_falha_fechada_sem "PROTEGIDOS ausente"              $'echo "$(date)"'                          ausente
 
 caso_pipeline() {   # caso_pipeline <descrição> <comando> <segmentos esperados> <limite em ms>
-  local descricao="$1" cmd="$2" esp_seg="$3" limite_ms="$4" ini fim ms s
+  # Vale a melhor de até 3 execuções, como em caso_desempenho (explicação lá).
+  local descricao="$1" cmd="$2" esp_seg="$3" limite_ms="$4" ini fim ms s t melhor="" sufixo=""
   # shellcheck disable=SC2034  # PROTEGIDOS é lida por falha_fechada, em divisor.sh
   PROTEGIDOS=("git push" "gh pr merge" "gh api" "gh alias")
-  ini=${EPOCHREALTIME/./}
-  dividir_comando "$cmd"
-  for s in "${SEGMENTOS[@]}"; do analisar_segmento "$s"; falha_fechada; done
-  fim=${EPOCHREALTIME/./}
-  ms=$(((fim - ini) / 1000))
-  if [[ ${#SEGMENTOS[@]} -eq $esp_seg && $ms -le $limite_ms ]]; then
-    echo "  ok    $descricao (${ms} ms)"
+  for t in 1 2 3; do
+    ini=${EPOCHREALTIME/./}
+    dividir_comando "$cmd"
+    for s in "${SEGMENTOS[@]}"; do analisar_segmento "$s"; falha_fechada; done
+    fim=${EPOCHREALTIME/./}
+    ms=$(((fim - ini) / 1000))
+    if [[ -z $melhor ]] || ((ms < melhor)); then melhor=$ms; fi
+    if ((melhor <= limite_ms)); then break; fi
+  done
+  if ((t > 1)); then sufixo=", melhor de $t tentativas"; fi
+  if [[ ${#SEGMENTOS[@]} -eq $esp_seg && $melhor -le $limite_ms ]]; then
+    echo "  ok    $descricao (${melhor} ms${sufixo})"
   else
-    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmento(s) (esperado $esp_seg) em ${ms} ms (limite ${limite_ms} ms)" >&2
+    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmento(s) (esperado $esp_seg) em ${melhor} ms, melhor de $t tentativas (limite ${limite_ms} ms)" >&2
     falhas=$((falhas + 1))
   fi
 }
