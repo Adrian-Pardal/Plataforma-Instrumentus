@@ -69,6 +69,12 @@ projeto() {   # projeto <nome>; deixa o caminho em P
   commit_em "$P" "2026-10-29T00:00:00Z"
 }
 
+# cria_err <id> <data> <categoria>: um ERR de exemplo em P (só o frontmatter importa para a coleta)
+cria_err() {
+  mkdir -p "$P/docs/erros"
+  printf -- '---\nid: %s\ntitulo: erro de exemplo\nstatus: corrigido\ncategoria: %s\ndata: %s\n---\n\n# %s\n' "$1" "$3" "$2" "$1" > "$P/docs/erros/$1-exemplo.md"
+}
+
 # coleta <args...>: roda o script no projeto P, com o gh de FAKE_GH (ok ou falha) e o claude falso; guarda RC e ERR.
 coleta() {
   local caminho="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH"
@@ -140,6 +146,29 @@ confere "gh não instalado" "$(celula fase-1 ci total nota)" "gh ausente: a nota
 FAKE_GH=lotado coleta "Fase 1" 2026-10-25 2026-10-28
 confere 1000 "$(celula fase-1 ci total valor)" "limite: conta as 1000"
 confere "limite de 1000 execuções atingido; contagem pode estar incompleta" "$(celula fase-1 ci total nota)" "limite: nota de contagem possivelmente incompleta"
+
+echo "▶ coletar-fase: ERR por categoria"
+projeto err
+cria_err ERR-001 2026-10-25 bug           # dentro (borda inicial)
+cria_err ERR-002 2026-10-27 erro-ia       # dentro
+cria_err ERR-003 2026-10-27 erro-ia       # dentro
+cria_err ERR-004 2026-10-29 bug           # fora (depois)
+cria_err ERR-005 2026-10-24 ambiente      # fora (antes)
+cria_err ERR-006 2026-10-28 processo      # dentro (borda final), categoria que o plano não listava
+printf '# Registro de erros\n\nSem frontmatter: não é um ERR.\n' > "$P/docs/erros/README.md"
+printf -- '---\nid: ERR-007\ncategoria: bug\n---\n' > "$P/docs/erros/ERR-007-sem-data.md"   # frontmatter incompleto
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 1 "$(celula fase-1 err bug valor)" "err: bug (a de 29/10 e a sem data ficam fora)"
+confere 2 "$(celula fase-1 err erro-ia valor)" "err: erro-ia"
+confere 0 "$(celula fase-1 err ambiente valor)" "err: ambiente fora do intervalo é 0 (a pasta existe)"
+confere 0 "$(celula fase-1 err producao valor)" "err: producao aparece mesmo sem nenhum"
+confere 1 "$(celula fase-1 err processo valor)" "err: categoria nova também aparece"
+confere 1 "$(celula fase-1 err sem-data-ou-categoria valor)" "err: ERR com frontmatter incompleto não some em silêncio"
+confere 0 "$(awk -F, '$4=="err" && $5=="README" {n++} END {print n+0}' "$(CSV fase-1)")" "err: o README.md da pasta não conta como ERR"
+projeto err-sem-pasta
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere "" "$(celula fase-1 err total valor)" "sem docs/erros: valor vazio, nunca 0"
+confere "pasta docs/erros ausente" "$(celula fase-1 err total nota)" "sem docs/erros: a nota diz por quê"
 
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de coletar-fase falharam" >&2

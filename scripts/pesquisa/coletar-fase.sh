@@ -76,8 +76,40 @@ coletar_ci() {
                   | group_by(.detalhe) | .[] | "\(length)\t\(.[0].detalhe)"' <<<"$json")
 }
 
+# --- Erros registrados (docs/erros/ERR-*.md) -------------------------------------------------------------------
+# Conta por categoria os ERR cuja data (campo "data:" do frontmatter) cai no intervalo. As 4 categorias do template
+# aparecem sempre, mesmo com 0 (a pasta existe, então 0 é um número de verdade). ERR sem data ou sem categoria
+# não entra em nenhuma contagem, mas aparece numa linha própria: nada some em silêncio.
+coletar_err() {
+  local pasta="$RAIZ/docs/erros" arq data categoria sem=0 c
+  if [[ ! -d "$pasta" ]]; then
+    linha err total "" "pasta docs/erros ausente"; return
+  fi
+  local -A conta=([bug]=0 [erro-ia]=0 [ambiente]=0 [producao]=0)
+  for arq in "$pasta"/ERR-*.md; do
+    [[ -f "$arq" ]] || continue
+    # lê só o frontmatter (entre o 1º e o 2º "---"): "data|categoria"
+    IFS='|' read -r data categoria < <(awk 'NR == 1 { if ($0 != "---") exit; next }
+                                            $0 == "---" { exit }
+                                            $1 == "data:" { d = $2 }
+                                            $1 == "categoria:" { c = $2 }
+                                            END { print d "|" c }' "$arq")
+    if [[ ! "$data" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ || -z "$categoria" ]]; then
+      sem=$((sem + 1)); continue
+    fi
+    if [[ ! "$data" < "$INICIO" && ! "$data" > "$FIM" ]]; then
+      conta[$categoria]=$(( ${conta[$categoria]:-0} + 1 ))
+    fi
+  done
+  while IFS= read -r c; do
+    linha err "$c" "${conta[$c]}" ""
+  done < <(printf '%s\n' "${!conta[@]}" | sort)
+  [[ $sem -eq 0 ]] || linha err sem-data-ou-categoria "$sem" "ERR com frontmatter incompleto, fora das contagens"
+}
+
 coletar_commits
 coletar_ci
+coletar_err
 
 DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
 mkdir -p "${DESTINO%/*}"
