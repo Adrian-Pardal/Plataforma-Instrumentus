@@ -17,7 +17,7 @@ transversal.
 | [implementar-tdd](../.claude/skills/implementar-tdd/SKILL.md) | implementação | manual | Para cada task do plano aprovado, uma por vez (`/implementar-tdd 3`) |
 | [registrar-adr](../.claude/skills/registrar-adr/SKILL.md) | transversal | automática | Ao decidir stack, banco, biblioteca importante, padrão, autenticação, modelo de dados ou método de trabalho |
 | [registrar-erro](../.claude/skills/registrar-erro/SKILL.md) | transversal | automática | Depois de corrigir ou entender um bug, erro da IA, problema de ambiente ou falha de produção (com causa raiz descoberta) |
-| [handoff](../.claude/skills/handoff/SKILL.md) | sessão | manual | Ao encerrar uma sessão de trabalho (`/handoff`) |
+| [handoff](../.claude/skills/handoff/SKILL.md) | sessão | manual | Ao encerrar uma sessão de trabalho; também gera o registro da pesquisa em docs/pesquisa/sessoes/ (`/handoff`) |
 | [revisar](../.claude/skills/revisar/SKILL.md) | revisão | manual | Ao fim de uma feature, antes do PR, com testes 100% verdes (`/revisar`) |
 | [retro](../.claude/skills/retro/SKILL.md) | fechamento | manual | Ao fim de uma feature, depois da revisão; a cada 3 meses também revisa as skills (`/retro`) |
 | [explicar](../.claude/skills/explicar/SKILL.md) | transversal | manual | Quando quiser entender um arquivo, trecho, conceito, erro ou stack trace; sem argumento explica o `git diff` (`/explicar <alvo>`) |

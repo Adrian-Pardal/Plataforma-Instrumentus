@@ -171,6 +171,10 @@ confere "settings.json registra o hook SessionStart (session-start.sh)" "$?"
 # Os eventos são dados privados da pesquisa (ADR 0007): nunca vão para o Git.
 grep -qxF '.claude/pesquisa/' "$RAIZ/.gitignore"; confere ".gitignore lista .claude/pesquisa/" "$?"
 git -C "$RAIZ" check-ignore -q .claude/pesquisa/eventos.jsonl; confere "o Git ignora .claude/pesquisa/eventos.jsonl" "$?"
+# A skill /handoff também gera o registro da sessão para a pesquisa: precisa citar de onde lê os bloqueios e onde grava.
+HANDOFF="$RAIZ/.claude/skills/handoff/SKILL.md"
+grep -qF '.claude/pesquisa/eventos.jsonl' "$HANDOFF"; confere "a skill handoff lê .claude/pesquisa/eventos.jsonl" "$?"
+grep -qF 'docs/pesquisa/sessoes/' "$HANDOFF"; confere "a skill handoff grava em docs/pesquisa/sessoes/" "$?"
 
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
