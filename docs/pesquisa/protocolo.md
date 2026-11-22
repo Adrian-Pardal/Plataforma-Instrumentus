@@ -46,14 +46,14 @@ resultado (correção ganha de aprovação; desbloqueio ganha de operação manu
 | M1 | 1 | Intervenções por tipo | Contagem por tipo da taxonomia, por sessão | Registro de sessão (sessoes/) |
 | M2 | 1 | Proporção de código da IA | Linhas ou commits atribuídos à IA ÷ total | Git (trailer de autoria, ver limitação) |
 | M3 | 2 | Erros da IA | Contagem de ERR com categoria `erro-ia` | docs/erros/ |
-| M4 | 2 | Peça que pegou o erro | Hook, CI, verify.sh, /revisar, revisor-codigo, auditor-spec, operador ou ninguém | docs/erros/ (campo `detectado-em`; campo novo a decidir) |
+| M4 | 2 | Peça que pegou o erro | Hook, CI, verify.sh, /revisar, revisor-codigo, auditor-spec, operador ou ninguém | docs/erros/ (campo `detectado-em`; campo novo a decidir) e, para os hooks, `.claude/pesquisa/eventos.jsonl` (um evento por bloqueio; ver docs/help/ferramentas/eventos-do-harness.md) |
 | M5 | 3 | Testes e cobertura | Nº de testes, cobertura e mutação por fase | `scripts/verify.sh full`, CI |
 | M6 | 3 | Achados da revisão | Nº de 🔴/🟡/🟢 por feature | Saída da /revisar |
 | M7 | 3 | CI | Taxa de execuções verdes e nº de reexecuções | `gh run list` |
 | M8 | 3 | Dívida | Entradas abertas em DEBT | docs/DEBT.md |
 | M9 | 3 | Complexidade | Métodos acima do limite | relatório de complexidade (docs/help/ferramentas/complexidade.md) |
 | M10 | 4 | Tokens | Entrada, saída, criação de cache e leitura de cache por sessão | Transcrições `~/.claude/projects/<projeto>/<sessão>.jsonl`, campo `usage` das respostas do modelo (conferido em 2026-11-22) |
-| M11 | 4 | Tempo | Duração de cada sessão e tempo ativo do operador | Campo `timestamp` de cada linha das transcrições + registro de sessão |
+| M11 | 4 | Tempo | Duração de cada sessão e tempo ativo do operador | Campo `timestamp` de cada linha das transcrições + registro de sessão + eventos `"tipo":"sessao"` de `.claude/pesquisa/eventos.jsonl` (início de cada sessão) |
 | M12 | 5 | Aprendizado | Conceitos estudados e acertos em quiz | aprendizado/diario.md (a criar) |
 | M13 | todas | Linha do tempo | Commits, PRs e tasks por data | Git, `gh pr list`, rodapé `Task: T<n>` |
 
@@ -61,7 +61,8 @@ resultado (correção ganha de aprovação; desbloqueio ganha de operação manu
 - O Git sozinho NÃO distingue autoria humana e de IA: commits feitos pelo Claude
   saem no nome do dono. M2 exige registrar a autoria (ver ADR 0007).
 - M4 depende do registro do erro ter sido feito (/registrar-erro); erros
-  não registrados não entram.
+  não registrados não entram. Os eventos dos hooks só mostram o que um hook BLOQUEOU: erro que nenhum hook
+  viu não aparece, e `.claude/pesquisa/eventos.jsonl` não vai para o Git (copie-o para fora do repositório).
 - Tokens e tempo dependem de as transcrições locais serem preservadas; elas
   ficam só na máquina do operador e não vão para o repositório.
 

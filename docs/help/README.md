@@ -23,6 +23,7 @@ Modelo para novas páginas: `docs/templates/help.md`.
 | Pedir o merge de um PR na develop ou entender um bloqueio do protect-merge | ferramentas/merge-de-pr.md |
 | Conferir, refazer ou afrouxar as regras de proteção da develop e da main | ferramentas/protecao-de-branches.md |
 | Subir o Collector de telemetria da pesquisa (tokens e tempo) e conferir os arquivos | ferramentas/telemetria.md |
+| Ler o registro dos bloqueios dos hooks e do início das sessões (pesquisa) | ferramentas/eventos-do-harness.md |
 
 ## help × runbooks
 

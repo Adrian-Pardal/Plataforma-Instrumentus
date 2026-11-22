@@ -67,14 +67,14 @@ Arquivo `.claude/pesquisa/eventos.jsonl` (no .gitignore; dados privados, ver ADR
 ## Tasks
 Marque com 🎓 as tasks que você faz à mão. TDD: teste vermelho, depois código.
 
-- [ ] T1 [ambos] — lib `eventos.sh` com `registrar_evento` · Cobre: CA-1, CA-2, CA-4 · Teste: `scripts/tests/eventos.test.sh` (JSON válido, escape de aspas e quebra de linha, truncamento, sem variável não grava, pasta sem permissão não falha, nada em stdout/stderr)
-- [ ] T2 [ambos] — `verify.sh` roda os testes dos scripts sem `CLAUDE_PROJECT_DIR` · Cobre: CA-5 · Teste: caso novo em `scripts/tests/verify.test.sh`
-- [ ] T3 [ambos] — protect-files grava o evento nos bloqueios · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh` (casos por motivo; permitido não grava; conteúdo e valor de variável não aparecem)
-- [ ] T4 [ambos] — protect-push grava o evento · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh`
-- [ ] T5 [ambos] — protect-merge grava o evento · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh`
-- [ ] T6 [ambos] — stop-verify grava o evento (testes falharam e falhas internas) · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh`
-- [ ] T7 [ambos] — `session-start.sh` + entrada no settings.json · Cobre: CA-6 · Teste: `eventos.test.sh` (stdout vazio; versão e branch; `claude` ausente; fora de repositório git) e `config.test.sh` (hook registrado)
-- [ ] T8 [ambos] — `.gitignore` e documentação (help, protocolo M4) · Cobre: CA-7, CA-8 · Teste: caso em `config.test.sh` (.gitignore contém a pasta)
+- [x] T1 [ambos] — lib `eventos.sh` com `registrar_evento` · Cobre: CA-1, CA-2, CA-4 · Teste: `scripts/tests/eventos.test.sh` (JSON válido, escape de aspas e quebra de linha, truncamento, sem variável não grava, pasta sem permissão não falha, nada em stdout/stderr)
+- [x] T2 [ambos] — `verify.sh` roda os testes dos scripts sem `CLAUDE_PROJECT_DIR` · Cobre: CA-5 · Teste: caso novo em `scripts/tests/verify.test.sh`
+- [x] T3 [ambos] — protect-files grava o evento nos bloqueios · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh` (casos por motivo; permitido não grava; conteúdo e valor de variável não aparecem)
+- [x] T4 [ambos] — protect-push grava o evento · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh`
+- [x] T5 [ambos] — protect-merge grava o evento · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh`
+- [x] T6 [ambos] — stop-verify grava o evento (testes falharam e falhas internas) · Cobre: CA-1, CA-2, CA-3 · Teste: `eventos.test.sh`
+- [x] T7 [ambos] — `session-start.sh` + entrada no settings.json · Cobre: CA-6 · Teste: `eventos.test.sh` (stdout vazio; versão e branch; `claude` ausente; fora de repositório git) e `config.test.sh` (hook registrado)
+- [x] T8 [ambos] — `.gitignore` e documentação (help, protocolo M4) · Cobre: CA-7, CA-8 · Teste: caso em `config.test.sh` (.gitignore contém a pasta)
 
 ## Rastreabilidade
 | Requisito | Critério | Task | Teste |
