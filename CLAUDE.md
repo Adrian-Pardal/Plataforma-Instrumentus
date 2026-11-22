@@ -41,7 +41,7 @@ médias por construto.
 - Erro relevante vira ERR-NNN em docs/erros/ (use /registrar-erro). Antes de mexer em autenticação, dados dos respondentes, migrations ou deploy, leia os erros dessas áreas em docs/erros/.
 - Toda ferramenta, credencial ou tarefa manual nova ganha página em docs/help/ no mesmo commit; quando um procedimento mudar, atualize a página. Exceção: skills são documentadas em docs/skills.md, não em docs/help.
 - Nunca edite .env nem commite segredos.
-- Merge de PR: só na develop, só quando eu pedir explicitamente no chat, com CI verde e /revisar sem 🔴/🟡; sempre `gh pr merge --merge` (nunca --squash, --rebase, --admin ou --auto; hook protect-merge). Merge na main é só meu.
+- Merge de PR: só na develop, só quando eu pedir explicitamente no chat, com CI verde e /revisar sem 🔴/🟡; sempre por merge commit (`gh pr merge --merge`; nunca --squash, --rebase, --admin ou --auto; hook protect-merge; ADR 0006). Merge na main é só meu. Título do PR em Conventional Commits (job titulo-do-pr). Nunca reescrever histórico já enviado (amend, rebase ou force push).
 - Mostre o conteúdo de todo arquivo novo ou alterado e espere minha aprovação antes de salvar.
 - Crie e edite arquivos só com as ferramentas Write/Edit, nunca com cat, echo, sed, tee ou redirecionamento pelo Bash.
 

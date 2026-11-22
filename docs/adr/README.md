@@ -13,3 +13,4 @@ como "Substituído por NNNN".
 | 0003 | [Merge de PR na develop pelo Claude, só sob pedido explícito](0003-merge-de-pr-na-develop-pelo-claude.md) | Aceito | 2026-10-28 |
 | 0004 | [Plataforma multi-método Instrumentus](0004-plataforma-multi-metodo-instrumentus.md) | Aceito | 2026-11-20 |
 | 0005 | [Um divisor de comandos compartilhado para os hooks que leem o comando do shell](0005-divisor-de-comandos-para-os-hooks.md) | Aceito | 2026-11-20 |
+| 0006 | [Estratégia de merge: merge commit em tudo e tag por versão](0006-estrategia-de-merge.md) | Aceito | 2026-11-21 |
