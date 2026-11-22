@@ -162,5 +162,12 @@ while IFS= read -r nome; do
   grep -qF "\`$nome\`" <<<"$aprovados"; confere "allow de mcp__${nome}__* é de servidor aprovado" "$?"
 done < <(jq -r '.permissions.allow[] | select(startswith("mcp__")) | split("__")[1]' "$RAIZ/.claude/settings.json")
 
+echo "▶ config: registro de eventos da pesquisa (plano 005)"
+# O hook SessionStart grava a linha de início de sessão. Todo comando de hook do settings.json aponta para um
+# script que existe e é executável.
+jq -e '[.hooks.SessionStart[]?.hooks[]?.command] | any(contains("session-start.sh"))' "$RAIZ/.claude/settings.json" >/dev/null 2>&1
+confere "settings.json registra o hook SessionStart (session-start.sh)" "$?"
+[[ -x "$RAIZ/.claude/hooks/session-start.sh" ]]; confere "session-start.sh existe e é executável" "$?"
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"

@@ -271,6 +271,69 @@ ERR=$(printf '%s' '{"hook_event_name":"Stop","stop_hook_active":false,"cwd":"/na
 confere 2 "$RC" "raiz do projeto inexistente: bloqueia (código 2)"
 confere false "$([[ -e "$TMP/nao-existe-2" ]] && echo true || echo false)" "raiz do projeto inexistente: não cria a pasta"
 
+echo "▶ session-start grava a linha de sessão e não imprime nada"
+SESSION="$RAIZ/.claude/hooks/session-start.sh"
+json_sessao() { jq -cn --arg d "$P" '{hook_event_name:"SessionStart",source:"startup",cwd:$d}'; }
+# roda_sessao [PATH]: roda o hook real com CLAUDE_PROJECT_DIR=$P; guarda RC, SAIDA_OUT e SAIDA_ERR.
+# O stdout de um hook SessionStart entra no contexto do Claude, por isso o teste exige que ele fique vazio.
+roda_sessao() {
+  rm -f "$(EVENTOS)"
+  SAIDA_OUT=$(printf '%s' "$(json_sessao)" | (cd / && PATH="${1:-$PATH}" CLAUDE_PROJECT_DIR="$P" "$SESSION") 2>"$TMP/err-sessao"); RC=$?
+  SAIDA_ERR=$(<"$TMP/err-sessao")
+}
+campos_sessao() { jq -r '[.tipo,.hook,.versao,.branch] | join("|")' < "$(EVENTOS)" 2>/dev/null | head -1; }
+# "claude" falso: imprime a versão dada (ou dorme, para provar o limite de tempo).
+mkdir -p "$TMP/claude-ok" "$TMP/claude-lento" "$TMP/claude-quebrado"
+printf '%s\n' '#!/usr/bin/env bash' 'echo "9.9.9 (Claude Code)"' > "$TMP/claude-ok/claude"
+printf '%s\n' '#!/usr/bin/env bash' 'sleep 30' > "$TMP/claude-lento/claude"
+printf '%s\n' '#!/usr/bin/env bash' 'exit 1' > "$TMP/claude-quebrado/claude"
+chmod +x "$TMP/claude-ok/claude" "$TMP/claude-lento/claude" "$TMP/claude-quebrado/claude"
+
+projeto sessao-git
+git init -q -b main "$P" || { echo "FALHA: git init" >&2; exit 1; }
+roda_sessao "$TMP/claude-ok:$PATH"
+confere 0 "$RC" "sai com 0"
+confere "" "$SAIDA_OUT" "stdout vazio"
+confere "" "$SAIDA_ERR" "stderr vazio"
+confere 1 "$(linhas)" "grava UMA linha"
+confere "sessao|session-start|9.9.9 (Claude Code)|main" "$(campos_sessao)" "tipo, hook, versão do claude e branch atual"
+confere true "$(jq -r '.quando | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")' < "$(EVENTOS)")" "quando é data e hora UTC"
+
+projeto sessao-sem-git
+roda_sessao "$TMP/claude-ok:$PATH"
+confere 0 "$RC" "fora de repositório git: sai com 0"
+confere "sessao|session-start|9.9.9 (Claude Code)|desconhecida" "$(campos_sessao)" "fora de repositório git: branch 'desconhecida'"
+
+projeto sessao-claude-quebrado
+roda_sessao "$TMP/claude-quebrado:$PATH"
+confere "sessao|session-start|desconhecida|desconhecida" "$(campos_sessao)" "claude que falha: versão 'desconhecida'"
+confere "" "$SAIDA_OUT$SAIDA_ERR" "claude que falha: nada impresso"
+
+# claude ausente: tira do PATH as pastas de TODAS as cópias do claude (type -ap lista todas).
+PASTAS_CLAUDE=$(type -ap claude 2>/dev/null | xargs -r -n1 dirname | sort -u)
+SEM_CLAUDE=$(tr ':' '\n' <<<"$PATH" | grep -vxFf <(printf '%s\n' "$PASTAS_CLAUDE" "/nada") | paste -sd:)
+if PATH="$SEM_CLAUDE" command -v claude >/dev/null 2>&1; then
+  echo "  • há outro claude no PATH: caso 'claude ausente' pulado"
+else
+  projeto sessao-sem-claude
+  roda_sessao "$SEM_CLAUDE"
+  confere 0 "$RC" "claude ausente: sai com 0"
+  confere "sessao|session-start|desconhecida|desconhecida" "$(campos_sessao)" "claude ausente: versão 'desconhecida'"
+  confere "" "$SAIDA_OUT$SAIDA_ERR" "claude ausente: nada impresso"
+fi
+
+projeto sessao-lenta
+INICIO=$SECONDS
+PESQUISA_TIMEOUT_CLAUDE=1 roda_sessao "$TMP/claude-lento:$PATH"
+confere true "$([[ $((SECONDS - INICIO)) -lt 10 ]] && echo true || echo false)" "claude lento: o hook não espera (limite de tempo)"
+confere "sessao|session-start|desconhecida|desconhecida" "$(campos_sessao)" "claude lento: versão 'desconhecida'"
+
+projeto sessao-sem-variavel
+SAIDA_OUT=$(printf '%s' "$(json_sessao)" | (cd / && env -u CLAUDE_PROJECT_DIR "$SESSION") 2>&1); RC=$?
+confere 0 "$RC" "sem CLAUDE_PROJECT_DIR: sai com 0"
+confere "" "$SAIDA_OUT" "sem CLAUDE_PROJECT_DIR: nada impresso"
+confere 0 "$(linhas)" "sem CLAUDE_PROJECT_DIR: não grava"
+
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de eventos falharam" >&2
   exit 1
