@@ -101,6 +101,14 @@ for cmd in curl wget nc ncat netcat telnet ssh scp sftp rsync "npm publish" "gh 
   confere "settings.json não libera '$cmd' em allow" "$?"
 done
 
+for amplo in 'Bash(*)' 'Bash' 'Bash(curl*)' 'Bash(c* *)'; do
+  jq -n --arg r "$amplo" '{permissions: {allow: [$r]}}' > "$TMP/amplo.json"
+  [[ -n "$(allow_libera_envio "$TMP/amplo.json")" ]]; confere "allow amplo '$amplo' é pego pelo teste" "$?"
+done
+printf '{"permissions":{"allow":["Bash(git status *)"]}}' > "$TMP/estreito.json"
+[[ -z "$(allow_libera_envio "$TMP/estreito.json")" ]]; confere "allow estreito (git status) não é pego" "$?"
+[[ -z "$(allow_libera_envio "$RAIZ/.claude/settings.json")" ]]; confere "settings.json não tem allow que cubra comando de envio" "$?"
+
 AGENTE="$RAIZ/docs/seguranca/agente.md"
 [[ -f "$AGENTE" ]]; confere "docs/seguranca/agente.md existe" "$?"
 for secao in "## Riscos" "## Defesas" "## Limites" "## Servidores MCP aprovados"; do
