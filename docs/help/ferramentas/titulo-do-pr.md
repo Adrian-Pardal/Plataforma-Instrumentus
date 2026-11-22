@@ -7,7 +7,8 @@ foi visto rodando num PR)
 ## PARA QUE SERVE
 O título do PR vira o título do commit de merge (o repositório usa `merge_commit_title = PR_TITLE`). O job
 `titulo-do-pr`, em `.github/workflows/ci.yml`, roda `scripts/validar-titulo-pr.sh` e falha se o título não
-seguir Conventional Commits. É a mesma regra do hook `commit-msg` do lefthook para os commits.
+seguir Conventional Commits. Usa a mesma regex do hook `commit-msg` do lefthook, com uma diferença:
+descrição só de espaços é recusada aqui (o lefthook a aceita).
 
 Padrão: `tipo(escopo opcional): descrição`, com `!` depois do tipo ou do escopo para mudança incompatível.
 Tipos aceitos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, `build`, `perf`. Escopo em minúsculas.
@@ -33,7 +34,7 @@ quando isso for feito).
 2. Se o job reprovar, corrija o título. Editar o título reexecuta o CI inteiro (o evento `edited` está no
    gatilho).
    ```bash
-   gh pr edit 16 --title "fix(ci): descrição curta"
+   gh pr edit <número> --title "fix(ci): descrição curta"
    ```
 3. Para testar um título antes, sem abrir PR:
    ```bash
@@ -43,7 +44,7 @@ quando isso for feito).
 
 ## COMO CONFERIR QUE DEU CERTO
 ```bash
-gh pr checks 16
+gh pr checks <número>
 ```
 Esperado: `titulo-do-pr  pass`, junto de `seguranca` e `verificar`.
 
