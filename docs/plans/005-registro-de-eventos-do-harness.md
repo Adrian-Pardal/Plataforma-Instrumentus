@@ -2,7 +2,7 @@
 
 - **Spec:** nenhuma. Fonte dos requisitos: ADR 0007 e o pedido do dono em 2026-11-22. Exceção autorizada pelo
   dono (a skill `planejar` exige spec Aprovada).
-- **Status:** Aprovado (dono, 2026-11-22)
+- **Status:** Concluído (aprovado pelo dono em 2026-11-22; 8 tasks feitas e verificadas pelo dono)
 - **Data:** 2026-11-22
 
 ## Visão técnica
