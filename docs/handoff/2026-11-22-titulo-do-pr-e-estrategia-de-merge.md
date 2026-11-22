@@ -2,7 +2,7 @@
 
 ## Onde estamos
 Planos 002 (registro de erros) e 003 (título do PR e estratégia de merge) CONCLUÍDOS e mergeados na `develop`
-(PRs #16 a #20; último: #20, commit de merge be7322f, 2026-11-22 03:08 UTC). O plano 001 (divisor de
+(PRs #16 a #22; último: #22, commit de merge 251b68f, 2026-11-22 03:31 UTC). O plano 001 (divisor de
 comandos) segue PAUSADO. O próximo trabalho do produto é a spec do método de Aceitabilidade TFA.
 
 ## Feito
@@ -25,6 +25,11 @@ comandos) segue PAUSADO. O próximo trabalho do produto é a spec do método de 
   - T7: regra no CLAUDE.md §6 (fundida na linha do merge de PR; segue com 62 linhas).
 - `/revisar` (skill) rodada duas vezes no PR #18, com os agentes `revisor-codigo` e `auditor-spec`: sem 🔴.
   Corrigidos 2 🟡 (condição morta no script e falta de teste para descrição só de espaços) e vários 🔵.
+- Teste de desempenho do divisor corrigido (PR #22): cada caso vale a melhor de até 3 execuções
+  (`melhor_de_3` e `relatar_desempenho` em `scripts/tests/divisor.test.sh`), com os limites intactos
+  (3000 ms e 2000 ms). `/revisar` rodada (sem 🔴; achados corrigidos: duplicação, texto da tolerância,
+  mensagem de falha e comentário). Prova por mutação nos dois caminhos: com os limites baixados para 30 ms e
+  200 ms, ambos ficaram vermelhos após 3 execuções.
 - Limpeza: branches locais mergeadas apagadas; remotas apagadas pelo dono (e pela exclusão automática).
 
 ## Em andamento
@@ -35,7 +40,6 @@ Nada pela metade.
    parte do plano 002 sem prova; depois, atualizar a linha "ainda não foi feita" de `registro-de-erros.md`.
 2. Spec do método de Aceitabilidade TFA (CLAUDE.md §2: sem spec aprovada, nada de código). Perguntas ao dono:
    quais outros métodos virão depois do TFA? Escala e relatório são próprios de cada método ou compartilhados?
-3. PR pequeno: tornar o teste de desempenho do divisor robusto (ver Problemas), com o ok do dono.
 
 ## Decisões
 - ADR 0006 (merge commit em tudo; título do PR em Conventional Commits; nunca reescrever histórico já enviado;
@@ -47,10 +51,12 @@ Nada pela metade.
   busca não está confirmado.
 
 ## Problemas
-- O teste de desempenho do divisor é FRÁGIL: no `verify.sh full` do PR #19 o caso "git commit com heredoc de 20 KB"
-  levou 2091 ms contra o limite de 2000 ms (rodado de novo, passou; medido 5 vezes: 1,0 a 1,4 s, com um pico de
-  1,9 s). Não tem relação com os documentos. Proposta: medir o melhor de 3 execuções (uma regressão quadrática
-  continuaria acima de 2 s em todas). Não alterei o teste (CLAUDE.md §3).
+- RESOLVIDO no PR #22: o teste de desempenho do divisor era frágil (no `verify.sh full` do PR #19, 2091 ms
+  contra o limite de 2000 ms; o normal é 1,0 a 1,4 s). Troca declarada: com "melhor de até 3 execuções", uma
+  regressão só um pouco acima do limite pode passar numa das execuções; a quadrática de verdade (5,5 s contra
+  3 s) continua reprovando. Só a regressão grande foi provada.
+- O stderr do `divisor.test.sh` mostra `divisor.sh: line 758: PROTEGIDOS: unbound variable`. Já existia: vem do
+  caso "PROTEGIDOS ausente" (T7d), não afeta o resultado e não foi mexido.
 - PR #5 do dependabot (`setup-java 6.3.0`) foi aberto antes do job `titulo-do-pr`; pode precisar de
   `gh pr update-branch 5`. O `mergeStateStatus` dele ainda dizia `CLEAN` depois da mudança de proteção; não sei se
   o GitHub só recalcula depois.
@@ -65,8 +71,8 @@ Nada pela metade.
   as linhas `fail`/`cancelled` que aparecem em `gh pr checks --watch` podem ser dessa execução cancelada.
 
 ## Estado da verificação
-`scripts/verify.sh full` rodou com rc=0 no último commit de código/documentos do PR #20 (todos os casos dos testes
-dos scripts passaram, shellcheck sem alertas em 22 arquivos; actionlint pulado local e verde no CI). CI do PR #20:
+`scripts/verify.sh full` rodou com rc=0 no último commit de código do PR #22 (todos os casos dos testes dos
+scripts passaram, shellcheck sem alertas em 22 arquivos; actionlint pulado local e verde no CI). CI do PR #22:
 `seguranca`, `titulo-do-pr` e `verificar` verdes.
 - Resultado: passou
 - Testes desativados/dívidas abertas: ver docs/DEBT.md
