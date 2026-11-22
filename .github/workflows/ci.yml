@@ -7,6 +7,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, edited, synchronize, reopened]
   push:
     branches: [main, develop]
 
@@ -116,6 +117,26 @@ jobs:
           SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
         run: scripts/abrir-issue-ci.sh
+
+  # Confere se o título do PR segue Conventional Commits (o título vira o título do commit de merge).
+  # A regra fica em scripts/validar-titulo-pr.sh (testado). Só roda em pull_request. Depois que este job
+  # existe na develop, ele é exigido na proteção da develop e da main (plano 003, T5).
+  titulo-do-pr:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Conferir o título do PR
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+        run: scripts/validar-titulo-pr.sh
 
   # --- Entram depois -------------------------------------------------------
   # TODO(codeql): ativar quando houver código Java/JavaScript. Só este job recebe security-events: write.

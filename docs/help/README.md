@@ -17,6 +17,7 @@ Modelo para novas páginas: `docs/templates/help.md`.
 | Ver quais funções de bash têm decisões demais (complexidade) | ferramentas/complexidade.md |
 | Instalar os hooks do git ou entender um commit recusado | ferramentas/lefthook.md |
 | Entender o CI, ler uma falha dele ou atualizar as actions | ferramentas/ci.md |
+| Ver a regra do título do PR (Conventional Commits) ou corrigir o check titulo-do-pr | ferramentas/titulo-do-pr.md |
 | Abrir issue de erro, criar as etiquetas ou entender a issue que o CI abre sozinho | ferramentas/registro-de-erros.md |
 | Pedir o merge de um PR na develop ou entender um bloqueio do protect-merge | ferramentas/merge-de-pr.md |
 | Conferir, refazer ou afrouxar as regras de proteção da develop e da main | ferramentas/protecao-de-branches.md |
