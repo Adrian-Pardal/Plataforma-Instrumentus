@@ -65,7 +65,7 @@ actions (commit `chore(deps): ...`). Maven e npm estão comentados.
    gh run list --limit 5
    gh run view <id> --log-failed
    ```
-3. Proteja a `main` e a `develop` exigindo os checks `seguranca` e `verificar`
+3. Proteja a `main` e a `develop` exigindo os checks `seguranca`, `verificar` e `titulo-do-pr`
    e PR. O passo a passo, pela API, está em `protecao-de-branches.md`. Os
    nomes dos checks aparecem só depois da primeira execução do workflow.
 4. Para atualizar uma action na mão: pegue o SHA da versão nova e troque o SHA
