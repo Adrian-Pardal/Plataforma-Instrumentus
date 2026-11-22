@@ -87,6 +87,23 @@ done < "$RAIZ/docs/skills.md"
 [[ $manuais -gt 0 ]];     confere "achou skills manuais na tabela ($manuais)" "$?"
 [[ $automaticas -gt 0 ]]; confere "achou skills automáticas na tabela ($automaticas)" "$?"
 
+# Imprime cada comando de envio que algum "allow" do arquivo libera. O padrão do allow é lido como glob do
+# bash ("*" casa qualquer coisa), então "Bash(*)", "Bash(curl*)" e "Bash(c* *)" são pegos. "$cmd x" cobre o
+# padrão com argumento ("curl *").
+ENVIO=(curl wget nc ncat netcat telnet ssh scp sftp rsync "npm publish" "gh gist")
+allow_libera_envio() {   # allow_libera_envio <settings.json>
+  local regra padrao cmd
+  while IFS= read -r regra; do
+    if   [[ "$regra" == "Bash" ]];      then padrao='*'
+    elif [[ "$regra" == "Bash("*")" ]]; then padrao="${regra#Bash(}"; padrao="${padrao%)}"
+    else continue; fi
+    for cmd in "${ENVIO[@]}"; do
+      # shellcheck disable=SC2053  # glob de propósito: o padrão fica sem aspas
+      if [[ "$cmd" == $padrao || "$cmd x" == $padrao ]]; then echo "$cmd"; fi
+    done
+  done < <(jq -r '.permissions.allow[]' "$1")
+}
+
 echo "▶ config: proteção do agente (plano 004)"
 # Comandos que enviam dados para fora pedem confirmação (permissions.ask do settings.json). Cada um nas duas
 # formas, "Bash(x)" e "Bash(x *)": não está confirmado que "x *" casa "x" sem argumentos.
