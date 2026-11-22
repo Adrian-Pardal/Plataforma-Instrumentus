@@ -148,6 +148,44 @@ rm -f "$(EVENTOS)"
 printf '%s' "$(json_bash "cat .env")" | (cd / && MINHA_VARIAVEL=VALOR_DA_VARIAVEL_789 CLAUDE_PROJECT_DIR="$P" "$RAIZ/.claude/hooks/protect-files.sh") >/dev/null 2>&1
 sem_o_texto "VALOR_DA_VARIAVEL_789" "valor de variável de ambiente não vai para o evento"
 
+echo "▶ protect-push grava o evento"
+projeto pp
+git init -q -b main "$P/repo" || { echo "FALHA: git init" >&2; exit 1; }
+json_bash_em() { jq -cn --arg c "$2" --arg d "$1" '{tool_name:"Bash",tool_input:{command:$c},cwd:$d}'; }   # json_bash_em <cwd> <cmd>
+roda_hook protect-push "$(json_bash "git push --force origin feat/x")"
+bloqueou "push --force" protect-push push-forcado ""
+roda_hook protect-push "$(json_bash "git push -fu origin feat/x")"
+bloqueou "push -fu" protect-push push-forcado ""
+roda_hook protect-push "$(json_bash "git push --mirror")"
+bloqueou "push --mirror" protect-push push-opcao-destrutiva ""
+roda_hook protect-push "$(json_bash "git push --repo=outro")"
+bloqueou "push --repo" protect-push push-opcao-proibida ""
+roda_hook protect-push "$(json_bash "git push -d origin feat/x")"
+bloqueou "push -d" protect-push push-delete ""
+roda_hook protect-push "$(json_bash "git push upstream feat/x")"
+bloqueou "remoto que não é origin" protect-push remoto-nao-permitido ""
+roda_hook protect-push "$(json_bash_em "$P/repo" "git push")"
+bloqueou "push sem destino estando na main" protect-push destino-nao-permitido "main"
+roda_hook protect-push "$(json_bash "git push origin main")"
+bloqueou "push para main" protect-push destino-nao-permitido "main"
+roda_hook protect-push "$(json_bash "git push origin feat/x:develop")"
+bloqueou "refspec que mira develop" protect-push destino-nao-permitido "develop"
+roda_hook protect-push "$(json_bash "git push origin +feat/x")"
+bloqueou "refspec com +" protect-push push-forcado "+feat/x"
+roda_hook protect-push "$(json_bash "git push origin :feat/x")"
+bloqueou "refspec que apaga a branch" protect-push push-delete ":feat/x"
+roda_hook protect-push "não é json"
+bloqueou "entrada que não é JSON" protect-push entrada-invalida ""
+roda_hook protect-push "$(json_bash "git push origin feat/x")"
+liberou "push para feat/x"
+roda_hook protect-push "$(json_bash "git status")"
+liberou "git que não é push"
+roda_hook protect-push "$(json_bash "ls -la")"
+liberou "comando que não é git"
+roda_hook protect-push "$(json_bash "git push https://TOKEN_SECRETO_999@exemplo.com/x.git feat/x")"
+bloqueou "push para URL com credencial" protect-push remoto-nao-permitido ""
+sem_o_texto "TOKEN_SECRETO_999" "credencial na URL do remoto não vai para o evento"
+
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de eventos falharam" >&2
   exit 1
