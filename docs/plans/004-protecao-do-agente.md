@@ -67,6 +67,8 @@ os merges por `gh api` já são barrados pelo hook `protect-merge`).
   Resultado (2026-11-22, modo default, dono viu o pedido): (a) `curl --version` pediu confirmação; (b) com
   `Bash(curl *)` em `allow` no `settings.local.json` o pedido continuou (o `ask` vence o `allow`). A linha
   temporária foi removida; o arquivo voltou ao original e o `git status` ficou limpo.
+- [x] T6 [infra] — correção do achado 5 da revisão: o teste pega `allow` amplo (`Bash(*)`, `Bash(curl*)`) que
+  cubra comando de envio · Cobre: pedido 2 · Teste: config.test.sh (commits d325f28 e 09db70d)
 
 ## Rastreabilidade
 | Pedido | Task | Teste |
