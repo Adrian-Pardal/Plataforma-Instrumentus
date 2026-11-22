@@ -23,6 +23,7 @@ transversal.
 | [explicar](../.claude/skills/explicar/SKILL.md) | transversal | manual | Quando quiser entender um arquivo, trecho, conceito, erro ou stack trace; sem argumento explica o `git diff` (`/explicar <alvo>`) |
 | [atualizar-docs](../.claude/skills/atualizar-docs/SKILL.md) | transversal | manual | Para auditar a saúde da documentação (cabeçalhos, links, índices, órfãos, frescor) e receber uma tabela de pendências antes de corrigir (`/atualizar-docs`) |
 | [documentar-tecnologia](../.claude/skills/documentar-tecnologia/SKILL.md) | transversal | automática | Depois que uma tecnologia foi decidida em ADR e entrou no projeto, ou quando a versão ou o uso mudarem (`/documentar-tecnologia <tecnologia>`) |
+| [estrategia-testes](../.claude/skills/estrategia-testes/SKILL.md) | transversal | manual | Para definir ou mudar a estratégia de testes (pirâmide, ferramentas, metas) ou atualizar as métricas de qualidade a partir dos relatórios reais (`/estrategia-testes`) |
 
 ## Subagentes
 
