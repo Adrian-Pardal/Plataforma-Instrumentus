@@ -88,6 +88,11 @@ cria_sessao() {
   } > "$arq"
 }
 
+# cria_eventos <linha>...: escreve .claude/pesquisa/eventos.jsonl em P com as linhas dadas (ev_bloqueio e ev_sessao as montam)
+cria_eventos() { mkdir -p "$P/.claude/pesquisa"; printf '%s\n' "$@" > "$P/.claude/pesquisa/eventos.jsonl"; }
+ev_bloqueio() { printf '{"quando":"%s","tipo":"bloqueio","hook":"%s","motivo":"adr-aceito","alvo":"x"}' "$1" "$2"; }   # <quando> <hook>
+ev_sessao() { printf '{"quando":"%s","tipo":"sessao","hook":"session-start","versao":"9.9.9","branch":"main"}' "$1"; }  # <quando>
+
 # coleta <args...>: roda o script no projeto P, com o gh de FAKE_GH (ok ou falha) e o claude falso; guarda RC e ERR.
 coleta() {
   local caminho="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH"
@@ -223,6 +228,50 @@ projeto sem-sessoes
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere "" "$(celula fase-1 intervencoes total valor)" "sem a pasta de sessões: valor vazio, nunca 0"
 confere "sem registros de sessão no período" "$(celula fase-1 intervencoes total nota)" "sem a pasta de sessões: a nota diz por quê"
+
+echo "▶ coletar-fase: bloqueios por hook"
+projeto bloqueios
+cria_eventos \
+  "$(ev_sessao 2026-10-24T09:00:00Z)" \
+  "$(ev_bloqueio 2026-10-26T10:00:00Z protect-files)" "$(ev_bloqueio 2026-10-26T11:00:00Z protect-files)" \
+  "$(ev_bloqueio 2026-10-27T10:00:00Z protect-push)" "$(ev_bloqueio 2026-10-28T23:59:59Z protect-push)" \
+  "$(ev_bloqueio 2026-10-25T00:00:00Z protect-merge)" "$(ev_bloqueio 2026-10-24T23:59:59Z protect-merge)" \
+  "$(ev_bloqueio 2026-10-29T00:00:00Z stop-verify)" \
+  "$(ev_bloqueio 2026-10-26T12:00:00Z novo-hook)" \
+  "isto não é json" "42"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 0 "$RC" "bloqueios: exit 0 (linhas que não são JSON são ignoradas)"
+confere 2 "$(celula fase-1 bloqueios protect-files valor)" "bloqueios: protect-files"
+confere 2 "$(celula fase-1 bloqueios protect-push valor)" "bloqueios: protect-push (a borda final conta)"
+confere 1 "$(celula fase-1 bloqueios protect-merge valor)" "bloqueios: protect-merge (a borda inicial conta, 1 s antes não)"
+confere 0 "$(celula fase-1 bloqueios stop-verify valor)" "bloqueios: hook sem bloqueio no intervalo é 0 (há dados cobrindo o período)"
+confere 1 "$(celula fase-1 bloqueios novo-hook valor)" "bloqueios: hook que o script não conhecia também aparece"
+confere "nao" "$(tem_linha fase-1 bloqueios cobertura)" "bloqueios: eventos cobrem o intervalo todo, sem aviso de cobertura"
+projeto bloqueios-parcial
+cria_eventos "$(ev_sessao 2026-10-27T08:00:00Z)" "$(ev_bloqueio 2026-10-27T10:00:00Z protect-push)"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 1 "$(celula fase-1 bloqueios protect-push valor)" "cobertura parcial: a contagem sai"
+confere "eventos só existem desde 2026-10-27; contagens parciais" "$(celula fase-1 bloqueios cobertura nota)" "cobertura parcial: a nota avisa desde quando há dados"
+confere "" "$(celula fase-1 bloqueios cobertura valor)" "cobertura parcial: a linha de aviso não tem valor"
+projeto bloqueios-depois
+cria_eventos "$(ev_sessao 2026-11-22T08:00:00Z)" "$(ev_bloqueio 2026-11-22T10:00:00Z protect-files)"
+coleta "Fase 1" 2026-10-25 2026-10-28
+for h in protect-files protect-push protect-merge stop-verify; do
+  confere "" "$(celula fase-1 bloqueios "$h" valor)" "intervalo antes dos eventos: $h sem valor, nunca 0"
+  confere "eventos só existem desde 2026-11-22" "$(celula fase-1 bloqueios "$h" nota)" "intervalo antes dos eventos: $h com a nota"
+done
+projeto bloqueios-sem-arquivo
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere "" "$(celula fase-1 bloqueios total valor)" "sem o arquivo de eventos: valor vazio"
+confere "arquivo de eventos ausente" "$(celula fase-1 bloqueios total nota)" "sem o arquivo de eventos: a nota diz por quê"
+projeto bloqueios-vazio
+cria_eventos "so lixo, nenhuma linha válida"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere "" "$(celula fase-1 bloqueios total valor)" "arquivo sem nenhum evento válido: valor vazio"
+confere "arquivo de eventos vazio" "$(celula fase-1 bloqueios total nota)" "arquivo sem nenhum evento válido: a nota diz por quê"
+
+echo "▶ coletar-fase: nenhuma IA é chamada"
+confere false "$([[ -e "$TMP/claude-chamado" ]] && echo true || echo false)" "o claude falso, que estava no PATH em todas as coletas, nunca foi chamado"
 
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de coletar-fase falharam" >&2

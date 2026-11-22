@@ -157,10 +157,43 @@ coletar_intervencoes() {
   [[ $sem_tabela -eq 0 ]] || linha intervencoes sessoes-sem-tabela "$sem_tabela" "sessão sem a tabela Intervenções humanas; fora das contagens"
 }
 
+# --- Bloqueios dos hooks (.claude/pesquisa/eventos.jsonl) -------------------------------------------------------
+# Conta os eventos "bloqueio" do intervalo por hook. O arquivo só existe desde que os hooks passaram a gravá-lo
+# (plano 005), então a cobertura é conferida: intervalo inteiro antes do primeiro evento = sem valor; intervalo que
+# começa antes dele = contagem sai com um aviso de que é parcial. Linhas que não são JSON são ignoradas.
+HOOKS_CONHECIDOS=(protect-files protect-push protect-merge stop-verify)
+coletar_bloqueios() {
+  local arq="$RAIZ/.claude/pesquisa/eventos.jsonl" primeiro n hook
+  local -A conta=()
+  if [[ ! -f "$arq" ]]; then
+    linha bloqueios total "" "arquivo de eventos ausente"; return
+  fi
+  primeiro=$(jq -Rr 'fromjson? | select(type == "object") | .quando // empty' "$arq" 2>/dev/null | sort | head -1)
+  if [[ -z "$primeiro" ]]; then
+    linha bloqueios total "" "arquivo de eventos vazio"; return
+  fi
+  primeiro="${primeiro:0:10}"
+  if [[ "$FIM" < "$primeiro" ]]; then
+    for hook in "${HOOKS_CONHECIDOS[@]}"; do linha bloqueios "$hook" "" "eventos só existem desde $primeiro"; done
+    return
+  fi
+  for hook in "${HOOKS_CONHECIDOS[@]}"; do conta[$hook]=0; done
+  while read -r n hook; do
+    conta[$hook]=$n
+  done < <(jq -Rr --arg ini "${INICIO}T00:00:00Z" --arg fim "${FIM}T23:59:59Z" \
+             'fromjson? | select(type == "object" and .tipo == "bloqueio" and .quando >= $ini and .quando <= $fim) | .hook // empty' \
+             "$arq" 2>/dev/null | sort | uniq -c | awk '{ print $1, $2 }')
+  while IFS= read -r hook; do
+    linha bloqueios "$hook" "${conta[$hook]}" ""
+  done < <(printf '%s\n' "${!conta[@]}" | sort)
+  [[ ! "$INICIO" < "$primeiro" ]] || linha bloqueios cobertura "" "eventos só existem desde $primeiro; contagens parciais"
+}
+
 coletar_commits
 coletar_ci
 coletar_err
 coletar_intervencoes
+coletar_bloqueios
 
 DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
 mkdir -p "${DESTINO%/*}"
