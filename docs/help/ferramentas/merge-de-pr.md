@@ -1,12 +1,21 @@
 # NOME
 merge-de-pr — pedir ao Claude o merge de um PR na develop e entender o que o hook bloqueia
 
-Última verificação: 2026-11-20 · Testado com: gh 2.103.2, bash 5, jq
+Última verificação: 2026-11-21 · Testado com: gh 2.103.2, bash 5, jq
 
 ## PARA QUE SERVE
 Define quando o Claude pode fazer merge de PR (ADR 0003). Regra: só na
 `develop`, só quando você pedir explicitamente no chat, com CI verde e
 `/revisar` sem 🔴/🟡, sempre por merge commit. Merge na `main` é só seu.
+
+Configuração do repositório no GitHub (conferida em 2026-11-21): só merge commit
+(squash e rebase desligados), título do commit de merge = título do PR, corpo = descrição do PR,
+e a branch do PR é apagada depois do merge. Para conferir:
+```bash
+gh api repos/Adrian-Pardal/Plataforma-Instrumentus --jq '{allow_merge_commit,allow_squash_merge,allow_rebase_merge,merge_commit_title,merge_commit_message,delete_branch_on_merge}'
+```
+Esperado: `true`, `false`, `false`, `PR_TITLE`, `PR_BODY`, `true`. Como o título do PR vira o do commit,
+ele segue Conventional Commits (`titulo-do-pr.md`).
 
 Três travas sustentam a regra:
 1. a regra no `CLAUDE.md` (§6);

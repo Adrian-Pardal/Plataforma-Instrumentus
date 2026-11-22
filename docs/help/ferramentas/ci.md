@@ -5,8 +5,9 @@ ci — o que o CI do GitHub Actions faz, como ler uma falha e como atualizar as 
 
 ## PARA QUE SERVE
 O arquivo `.github/workflows/ci.yml` roda em todo pull request e em todo
-push na `main` e na `develop`. Ele tem dois jobs de verificação (mais um que só
-roda na falha da `main`), e o nome de cada check no GitHub é o próprio nome do job:
+push na `main` e na `develop`. Ele tem dois jobs de verificação (mais dois com
+gatilho próprio: `registrar-falha` e `titulo-do-pr`), e o nome de cada check no GitHub
+é o próprio nome do job:
 
 - **`seguranca`** (roda primeiro): o gitleaks varre todos os commits em busca
   de segredos; em PR, o dependency review reprova se o PR trouxer uma
@@ -18,6 +19,9 @@ roda na falha da `main`), e o nome de cada check no GitHub é o próprio nome do
 - **`registrar-falha`** (só em push na `main` e só se um job acima falhar): abre a
   issue "CI falhou na main" com o link do log, sem duplicar. Detalhes e a etiqueta
   `incidente` (que precisa existir) estão em `registro-de-erros.md`.
+- **`titulo-do-pr`** (só em pull request): confere se o título do PR segue
+  Conventional Commits. Detalhes em `titulo-do-pr.md`. O gatilho do workflow tem os
+  tipos `opened`, `edited`, `synchronize` e `reopened`: editar o título reexecuta o CI inteiro.
 
 Regras do arquivo: permissões mínimas por job (`contents: read`), actions de
 terceiros fixadas pelo SHA completo (a versão fica no comentário) e um
@@ -94,6 +98,7 @@ actions (commit `chore(deps): ...`). Maven e npm estão comentados.
 - **Voltar atrás numa mudança do workflow:** `git revert <commit>` em um PR.
 
 ## VER TAMBÉM
+- `docs/help/ferramentas/titulo-do-pr.md`
 - `docs/help/ferramentas/registro-de-erros.md`
 - `docs/help/ferramentas/protecao-de-branches.md`
 - `docs/help/ferramentas/merge-de-pr.md`
