@@ -127,44 +127,66 @@ coletar_err() {
 # reconhece contam como "indefinido". Só a tabela dessa seção conta (a próxima seção, com outras tabelas, não).
 # Sessão sem a tabela aparece numa linha própria e fica fora das contagens: nada some em silêncio.
 TIPOS_INTERVENCAO=(decisao aprovacao correcao operacao-manual desbloqueio aprendizado)
+
+# O registro de sessão cai no intervalo? A data é o início do nome do arquivo; README.md e outros nomes ficam de fora.
+sessao_no_intervalo() {   # sessao_no_intervalo <arquivo>
+  local nome="${1##*/}" data
+  data="${nome:0:10}"
+  [[ "$data" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && ! "$data" < "$INICIO" && ! "$data" > "$FIM" ]]
+}
+
+# Os tipos da tabela "Intervenções humanas" de uma sessão, um por linha. Sem a seção, imprime "@@sem-secao@@".
+tipos_da_sessao() {   # tipos_da_sessao <arquivo>
+  awk '/^#+[[:space:]]+Intervenções humanas/ { dentro = 1; achou = 1; next }
+       dentro && /^#/ { dentro = 0 }
+       dentro && /^\|/ {
+         split($0, c, "|"); tipo = c[4]; gsub(/^[ \t]+|[ \t]+$/, "", tipo)
+         if (c[2] ~ /^[ \t]*#[ \t]*$/ || tipo ~ /^[-: ]+$/) next      # cabeçalho e separador da tabela
+         print (tipo == "" ? "?" : tipo)                              # tipo em branco = indefinido
+       }
+       END { if (!achou) print "@@sem-secao@@" }' "$1"
+}
+
+# Um tipo como veio na tabela ("Operação manual", "?") vira o nome canônico ("operacao-manual") ou "indefinido".
+# Lê o array "conta" de coletar_intervencoes (o bash enxerga as variáveis locais de quem chamou).
+tipo_canonico() {   # tipo_canonico <texto>
+  local t
+  t=$(minusculas_sem_acento <<<"$1" | sed -E 's/[[:space:]]+/-/g')
+  if [[ -v "conta[$t]" ]]; then echo "$t"; else echo indefinido; fi
+}
+
+# Escreve as linhas de intervencoes. Lê lidas, sem_tabela, total e conta de coletar_intervencoes.
+emitir_intervencoes() {
+  local t
+  if [[ $lidas -gt 0 ]]; then
+    for t in "${TIPOS_INTERVENCAO[@]}" indefinido; do linha intervencoes "$t" "${conta[$t]}" ""; done
+    linha intervencoes total "$total" ""
+    linha intervencoes sessoes-lidas "$lidas" ""
+  elif [[ $sem_tabela -eq 0 ]]; then
+    linha intervencoes total "" "sem registros de sessão no período"
+  else
+    linha intervencoes total "" "nenhuma sessão do período tem a tabela Intervenções humanas"
+  fi
+  [[ $sem_tabela -eq 0 ]] || linha intervencoes sessoes-sem-tabela "$sem_tabela" "sessão sem a tabela Intervenções humanas; fora das contagens"
+}
+
 coletar_intervencoes() {
-  local pasta="$RAIZ/docs/pesquisa/sessoes" arq base data tipos tipo t
+  local pasta="$RAIZ/docs/pesquisa/sessoes" arq tipos tipo t
   local lidas=0 sem_tabela=0 total=0
   local -A conta=([decisao]=0 [aprovacao]=0 [correcao]=0 [operacao-manual]=0 [desbloqueio]=0 [aprendizado]=0 [indefinido]=0)
   for arq in "$pasta"/*.md; do
     [[ -f "$arq" ]] || continue
-    base="${arq##*/}"; data="${base:0:10}"
-    [[ "$data" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || continue         # README.md e outros nomes ficam de fora
-    [[ ! "$data" < "$INICIO" && ! "$data" > "$FIM" ]] || continue
-    tipos=$(awk '/^#+[[:space:]]+Intervenções humanas/ { dentro = 1; achou = 1; next }
-                 dentro && /^#/ { dentro = 0 }
-                 dentro && /^\|/ {
-                   split($0, c, "|"); tipo = c[4]; gsub(/^[ \t]+|[ \t]+$/, "", tipo)
-                   if (c[2] ~ /^[ \t]*#[ \t]*$/ || tipo ~ /^[-: ]+$/) next      # cabeçalho e separador da tabela
-                   print (tipo == "" ? "?" : tipo)                              # tipo em branco = indefinido
-                 }
-                 END { if (!achou) print "@@sem-secao@@" }' "$arq")
+    sessao_no_intervalo "$arq" || continue
+    tipos=$(tipos_da_sessao "$arq")
     if [[ "$tipos" == "@@sem-secao@@" ]]; then sem_tabela=$((sem_tabela + 1)); continue; fi
     lidas=$((lidas + 1))
     while IFS= read -r tipo; do
       [[ -n "$tipos" ]] || break                                          # tabela sem nenhuma linha
-      t=$(minusculas_sem_acento <<<"$tipo" | sed -E 's/[[:space:]]+/-/g')
-      [[ -v "conta[$t]" && "$t" != indefinido ]] || t=indefinido
+      t=$(tipo_canonico "$tipo")
       conta[$t]=$(( ${conta[$t]} + 1 )); total=$((total + 1))
     done <<<"$tipos"
   done
-  if [[ $lidas -eq 0 ]]; then
-    if [[ $sem_tabela -eq 0 ]]; then
-      linha intervencoes total "" "sem registros de sessão no período"
-    else
-      linha intervencoes total "" "nenhuma sessão do período tem a tabela Intervenções humanas"
-    fi
-  else
-    for t in "${TIPOS_INTERVENCAO[@]}" indefinido; do linha intervencoes "$t" "${conta[$t]}" ""; done
-    linha intervencoes total "$total" ""
-    linha intervencoes sessoes-lidas "$lidas" ""
-  fi
-  [[ $sem_tabela -eq 0 ]] || linha intervencoes sessoes-sem-tabela "$sem_tabela" "sessão sem a tabela Intervenções humanas; fora das contagens"
+  emitir_intervencoes
 }
 
 # --- Bloqueios dos hooks (.claude/pesquisa/eventos.jsonl) -------------------------------------------------------
