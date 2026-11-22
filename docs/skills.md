@@ -25,6 +25,7 @@ transversal.
 | [documentar-tecnologia](../.claude/skills/documentar-tecnologia/SKILL.md) | transversal | automática | Depois que uma tecnologia foi decidida em ADR e entrou no projeto, ou quando a versão ou o uso mudarem (`/documentar-tecnologia <tecnologia>`) |
 | [estrategia-testes](../.claude/skills/estrategia-testes/SKILL.md) | transversal | manual | Para definir ou mudar a estratégia de testes (pirâmide, ferramentas, metas) ou atualizar as métricas de qualidade a partir dos relatórios reais (`/estrategia-testes`) |
 | [casos-de-teste](../.claude/skills/casos-de-teste/SKILL.md) | plano | automática | Depois do plano de uma feature, ou quando um critério de aceite ficar sem caso de teste (a `implementar-tdd` a aciona); também `/casos-de-teste <feature>` |
+| [casos-de-borda](../.claude/skills/casos-de-borda/SKILL.md) | plano | automática | Quando a `casos-de-teste` a aciona, ou ao revisar uma regra ou método em busca do que pode quebrar (`/casos-de-borda <regra ou método>`) |
 
 ## Subagentes
 
