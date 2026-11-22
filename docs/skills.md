@@ -21,6 +21,7 @@ transversal.
 | [revisar](../.claude/skills/revisar/SKILL.md) | revisão | manual | Ao fim de uma feature, antes do PR, com testes 100% verdes (`/revisar`) |
 | [retro](../.claude/skills/retro/SKILL.md) | fechamento | manual | Ao fim de uma feature, depois da revisão; a cada 3 meses também revisa as skills (`/retro`) |
 | [explicar](../.claude/skills/explicar/SKILL.md) | transversal | manual | Quando quiser entender um arquivo, trecho, conceito, erro ou stack trace; sem argumento explica o `git diff` (`/explicar <alvo>`) |
+| [atualizar-docs](../.claude/skills/atualizar-docs/SKILL.md) | transversal | manual | Para auditar a saúde da documentação (cabeçalhos, links, índices, órfãos, frescor) e receber uma tabela de pendências antes de corrigir (`/atualizar-docs`) |
 
 ## Subagentes
 
