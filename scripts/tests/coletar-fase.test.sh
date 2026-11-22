@@ -101,7 +101,8 @@ coleta() {
   local caminho="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH"
   [[ "${FAKE_GH:-ok}" == ausente ]] && caminho="$TMP/claude-falso:$TMP/bin-sem-gh"   # FAKE_GH=ausente: nenhum gh no PATH
   # TZ=BRT3 é o fuso UTC-3 em forma POSIX (não depende de tzdata); TZ_TESTE troca o fuso de um caso.
-  ERR=$(cd / && TZ="${TZ_TESTE:-BRT3}" GH_CWD_ARQ="$TMP/gh-cwd" COLETA_RAIZ="$P" PATH="$caminho" "$SCRIPT" "$@" 2>&1 >/dev/null); RC=$?
+  ERR=$(cd / && TZ="${TZ_TESTE:-BRT3}" GH_CWD_ARQ="$TMP/gh-cwd" COLETA_RAIZ="$P" PATH="$caminho" "$SCRIPT" "$@" 2>&1 >"$TMP/stdout.txt"); RC=$?
+  OUT=$(<"$TMP/stdout.txt")   # a saída padrão (a linha "✔ gravado" só pode aparecer se o csv foi mesmo gravado)
 }
 CSV() { echo "$P/docs/pesquisa/dados/$1.csv"; }
 # celula <slug> <metrica> <detalhe> <valor|nota>: o conteúdo da célula (vazio se a linha não existe ou a célula está vazia)
@@ -277,6 +278,25 @@ cria_eventos "so lixo, nenhuma linha válida"
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere "" "$(celula fase-1 bloqueios total valor)" "arquivo sem nenhum evento válido: valor vazio"
 confere "arquivo de eventos vazio" "$(celula fase-1 bloqueios total nota)" "arquivo sem nenhum evento válido: a nota diz por quê"
+
+echo "▶ coletar-fase: falha ao gravar o csv (achado da /revisar: dizia 'gravado' sem ter gravado)"
+projeto grava-pasta-ocupada
+mkdir -p "$P/docs/pesquisa"; : > "$P/docs/pesquisa/dados"   # "dados" é um ARQUIVO: o mkdir -p não consegue criar a pasta
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 2 "$RC" "pasta de dados impossível: exit 2"
+confere true "$([[ "$ERR" == *"não consegui"* ]] && echo true || echo false)" "pasta de dados impossível: a mensagem diz o que houve"
+confere false "$([[ "$OUT" == *"✔ gravado"* ]] && echo true || echo false)" "pasta de dados impossível: NÃO diz que gravou"
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "  • rodando como root: o caso 'pasta sem permissão de escrita' foi pulado"
+else
+  projeto grava-sem-permissao
+  mkdir -p "$P/docs/pesquisa/dados"; chmod 555 "$P/docs/pesquisa/dados"   # existe, mas ninguém escreve nela
+  coleta "Fase 1" 2026-10-25 2026-10-28
+  confere 2 "$RC" "pasta sem permissão de escrita: exit 2"
+  confere true "$([[ "$ERR" == *"não consegui"* ]] && echo true || echo false)" "pasta sem permissão de escrita: a mensagem diz o que houve"
+  confere false "$([[ "$OUT" == *"✔ gravado"* ]] && echo true || echo false)" "pasta sem permissão de escrita: NÃO diz que gravou"
+  chmod 755 "$P/docs/pesquisa/dados"
+fi
 
 echo "▶ coletar-fase: nenhuma IA é chamada"
 confere false "$([[ -e "$TMP/claude-chamado" ]] && echo true || echo false)" "o claude falso, que estava no PATH em todas as coletas, nunca foi chamado"
