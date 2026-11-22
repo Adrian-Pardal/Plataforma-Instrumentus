@@ -82,7 +82,7 @@ cria_err() {
 # na tabela "Intervenções humanas" para cada tipo dado. Põe também uma tabela na seção "Bloqueios do harness", que
 # NÃO pode ser contada como intervenção.
 cria_sessao() {
-  local arq="$P/docs/pesquisa/sessoes/$1" i=0 t; shift
+  local arq="$P/docs/estudo-de-caso/sessoes/$1" i=0 t; shift
   mkdir -p "${arq%/*}"
   {
     printf '# Sessão\n\n## Feito\n- a\n\n## Intervenções humanas\n| # | O que o dono fez | Tipo |\n|---|---|---|\n'
@@ -104,7 +104,7 @@ coleta() {
   ERR=$(cd / && TZ="${TZ_TESTE:-BRT3}" GH_CWD_ARQ="$TMP/gh-cwd" COLETA_RAIZ="$P" PATH="$caminho" "$SCRIPT" "$@" 2>&1 >"$TMP/stdout.txt"); RC=$?
   OUT=$(<"$TMP/stdout.txt")   # a saída padrão (a linha "✔ gravado" só pode aparecer se o csv foi mesmo gravado)
 }
-CSV() { echo "$P/docs/pesquisa/dados/$1.csv"; }
+CSV() { echo "$P/docs/estudo-de-caso/dados/$1.csv"; }
 # celula <slug> <metrica> <detalhe> <valor|nota>: o conteúdo da célula (vazio se a linha não existe ou a célula está vazia)
 celula() { awk -F, -v m="$2" -v d="$3" -v c="$4" '$4==m && $5==d { print (c=="valor" ? $6 : $7); exit }' "$(CSV "$1")"; }
 tem_linha() { awk -F, -v m="$2" -v d="$3" '$4==m && $5==d { f=1 } END { print f ? "sim" : "nao" }' "$(CSV "$1")"; }
@@ -113,7 +113,7 @@ echo "▶ coletar-fase: argumentos inválidos (exit 2, mensagem de uso, nada gra
 projeto args
 coleta;                                       confere 2 "$RC" "sem argumentos"
 confere true "$([[ "$ERR" == *Uso:* ]] && echo true || echo false)" "sem argumentos: mostra a mensagem de uso"
-confere false "$([[ -e "$P/docs/pesquisa/dados" ]] && echo true || echo false)" "sem argumentos: não grava nada"
+confere false "$([[ -e "$P/docs/estudo-de-caso/dados" ]] && echo true || echo false)" "sem argumentos: não grava nada"
 coleta "Fase 1" 2026-10-25;                   confere 2 "$RC" "falta a data final"
 coleta "Fase 1" 2026-10-25 2026-10-28 extra;  confere 2 "$RC" "argumento a mais"
 coleta "Fase 1" 2026-13-45 2026-10-28;        confere 2 "$RC" "data inválida (mês 13)"
@@ -122,7 +122,7 @@ coleta "Fase 1" 26-10-25 2026-10-28;          confere 2 "$RC" "data fora do form
 coleta "Fase 1" 2026-10-28 2026-10-25;        confere 2 "$RC" "início depois do fim"
 coleta "" 2026-10-25 2026-10-28;              confere 2 "$RC" "nome da fase vazio"
 coleta "!!!" 2026-10-25 2026-10-28;           confere 2 "$RC" "nome sem nenhuma letra ou número"
-confere false "$([[ -e "$P/docs/pesquisa/dados" ]] && echo true || echo false)" "nenhum erro de uso gravou arquivo"
+confere false "$([[ -e "$P/docs/estudo-de-caso/dados" ]] && echo true || echo false)" "nenhum erro de uso gravou arquivo"
 
 echo "▶ coletar-fase: csv, nome do arquivo e commits"
 projeto basico
@@ -203,8 +203,8 @@ cria_sessao 2026-10-26.md "Decisão" "Aprovação" "Correção" "?"             
 cria_sessao 2026-10-27-2.md "decisão" "DECISÃO" "Operação manual" "Aprendizado" "Desbloqueio" "Foo"  # dentro (outro dia, sufixo -2)
 cria_sessao 2026-10-30.md "Decisão" "Decisão" "Decisão"                                          # fora (depois)
 cria_sessao 2026-10-24.md "Aprovação" "Aprovação"                                                # fora (antes)
-printf '# Sessão sem a tabela\n\n## Feito\n- a\n' > "$P/docs/pesquisa/sessoes/2026-10-28.md"      # dentro, mas sem a tabela
-printf '# Registro de sessões\n\n| a | b | Decisão |\n' > "$P/docs/pesquisa/sessoes/README.md"
+printf '# Sessão sem a tabela\n\n## Feito\n- a\n' > "$P/docs/estudo-de-caso/sessoes/2026-10-28.md"      # dentro, mas sem a tabela
+printf '# Registro de sessões\n\n| a | b | Decisão |\n' > "$P/docs/estudo-de-caso/sessoes/README.md"
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere 0 "$RC" "sessões: exit 0"
 confere 3 "$(celula fase-1 intervencoes decisao valor)" "sessões: decisao (minúscula, maiúscula e acento normalizados)"
@@ -223,7 +223,7 @@ coleta "Fase 1" 2026-10-25 2026-10-28
 confere 1 "$(celula fase-1 intervencoes indefinido valor)" "sessões: linha com o tipo em branco conta como indefinido"
 confere 1 "$(celula fase-1 intervencoes total valor)" "sessões: linha com o tipo em branco entra no total"
 projeto sessoes-so-sem-tabela
-mkdir -p "$P/docs/pesquisa/sessoes"; printf '# Sessão\n\n## Feito\n- a\n' > "$P/docs/pesquisa/sessoes/2026-10-26.md"
+mkdir -p "$P/docs/estudo-de-caso/sessoes"; printf '# Sessão\n\n## Feito\n- a\n' > "$P/docs/estudo-de-caso/sessoes/2026-10-26.md"
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere "" "$(celula fase-1 intervencoes total valor)" "só sessões sem tabela: total vazio, nunca 0"
 confere "nenhuma sessão do período tem a tabela Intervenções humanas" "$(celula fase-1 intervencoes total nota)" "só sessões sem tabela: a nota diz por quê"
@@ -281,7 +281,7 @@ confere "arquivo de eventos vazio" "$(celula fase-1 bloqueios total nota)" "arqu
 
 echo "▶ coletar-fase: falha ao gravar o csv (achado da /revisar: dizia 'gravado' sem ter gravado)"
 projeto grava-pasta-ocupada
-mkdir -p "$P/docs/pesquisa"; : > "$P/docs/pesquisa/dados"   # "dados" é um ARQUIVO: o mkdir -p não consegue criar a pasta
+mkdir -p "$P/docs/estudo-de-caso"; : > "$P/docs/estudo-de-caso/dados"   # "dados" é um ARQUIVO: o mkdir -p não consegue criar a pasta
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere 2 "$RC" "pasta de dados impossível: exit 2"
 confere true "$([[ "$ERR" == *"não consegui"* ]] && echo true || echo false)" "pasta de dados impossível: a mensagem diz o que houve"
@@ -290,12 +290,12 @@ if [[ "$(id -u)" -eq 0 ]]; then
   echo "  • rodando como root: o caso 'pasta sem permissão de escrita' foi pulado"
 else
   projeto grava-sem-permissao
-  mkdir -p "$P/docs/pesquisa/dados"; chmod 555 "$P/docs/pesquisa/dados"   # existe, mas ninguém escreve nela
+  mkdir -p "$P/docs/estudo-de-caso/dados"; chmod 555 "$P/docs/estudo-de-caso/dados"   # existe, mas ninguém escreve nela
   coleta "Fase 1" 2026-10-25 2026-10-28
   confere 2 "$RC" "pasta sem permissão de escrita: exit 2"
   confere true "$([[ "$ERR" == *"não consegui"* ]] && echo true || echo false)" "pasta sem permissão de escrita: a mensagem diz o que houve"
   confere false "$([[ "$OUT" == *"✔ gravado"* ]] && echo true || echo false)" "pasta sem permissão de escrita: NÃO diz que gravou"
-  chmod 755 "$P/docs/pesquisa/dados"
+  chmod 755 "$P/docs/estudo-de-caso/dados"
 fi
 
 echo "▶ coletar-fase: nenhuma IA é chamada"
