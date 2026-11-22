@@ -87,6 +87,67 @@ SAIDA=$(CLAUDE_PROJECT_DIR="$P" bash -c 'source "$1"; PATH=/nonexistent; registr
 confere "rc=0" "$SAIDA" "sem jq: devolve 0 e não imprime"
 confere 0 "$(linhas)" "sem jq: não grava"
 
+# --- Hooks ----------------------------------------------------------------------------------------------
+# roda_hook <hook> <json>: roda o hook real com CLAUDE_PROJECT_DIR=$P (RC e ERR) e, de controle, sem ela
+# (RC_CTRL e ERR_CTRL). Comparar os dois prova que gravar o evento não muda o código de saída nem o stderr (CA-3).
+roda_hook() {
+  local hook="$RAIZ/.claude/hooks/$1.sh"
+  rm -f "$(EVENTOS)"
+  ERR=$(printf '%s' "$2" | (cd / && CLAUDE_PROJECT_DIR="$P" "$hook") 2>&1 >/dev/null); RC=$?
+  ERR_CTRL=$(printf '%s' "$2" | (cd / && env -u CLAUDE_PROJECT_DIR "$hook") 2>&1 >/dev/null); RC_CTRL=$?
+}
+# bloqueou <descrição> <hook> <motivo> <alvo>: o hook bloqueou (2), gravou UMA linha certa e nada mudou no resto.
+bloqueou() {
+  confere 2 "$RC" "$1: bloqueia (código 2)"
+  confere "$RC_CTRL" "$RC" "$1: mesmo código de saída sem o registro"
+  confere "$ERR_CTRL" "$ERR" "$1: mesmo stderr sem o registro"
+  confere 1 "$(linhas)" "$1: grava UMA linha"
+  confere "bloqueio|$2|$3|$4" "$({ jq -r '[.tipo,.hook,.motivo,.alvo] | join("|")' < "$(EVENTOS)"; } 2>/dev/null | head -1)" "$1: hook, motivo e alvo"
+}
+# sem_o_texto <texto> <descrição>: passa só se o evento EXISTE e NÃO contém o texto (arquivo ausente não vale).
+sem_o_texto() {
+  confere sim "$([[ -f "$(EVENTOS)" ]] && ! grep -q -- "$1" "$(EVENTOS)" && echo sim || echo nao)" "$2"
+}
+# liberou <descrição>: o hook deixou passar (0) e não gravou nada.
+liberou() {
+  confere 0 "$RC" "$1: libera (código 0)"
+  confere 0 "$(linhas)" "$1: não grava nada"
+}
+json_write() { jq -cn --arg p "$1" --arg c "${2:-x}" --arg d "$P" '{tool_name:"Write",tool_input:{file_path:$p,content:$c},cwd:$d}'; }
+json_bash() { jq -cn --arg c "$1" --arg d "$P" '{tool_name:"Bash",tool_input:{command:$c},cwd:$d}'; }
+
+echo "▶ protect-files grava o evento"
+projeto pf
+mkdir -p "$P/docs/adr"
+printf '# ADR 0001\n\n- **Status:** Aceito\n- **Data:** 2026-01-01\n\nTexto.\n' > "$P/docs/adr/0001-exemplo.md"
+roda_hook protect-files "$(json_write ".env")"
+bloqueou "Write em .env" protect-files arquivo-sensivel ".env"
+roda_hook protect-files "$(json_write "secrets/chave.txt")"
+bloqueou "Write em secrets/" protect-files arquivo-sensivel "secrets/chave.txt"
+roda_hook protect-files "$(json_write "docs/adr/0001-exemplo.md" "outro texto")"
+bloqueou "Write em ADR Aceito" protect-files adr-aceito "docs/adr/0001-exemplo.md"
+roda_hook protect-files "$(json_bash "cat .env")"
+bloqueou "Bash lendo .env" protect-files bash-leitura-segredo ".env"
+roda_hook protect-files "$(json_bash "echo x > .env")"
+bloqueou "Bash escrevendo em .env" protect-files bash-escrita-sensivel ".env"
+roda_hook protect-files "$(json_bash "rm docs/adr/0001-exemplo.md")"
+bloqueou "Bash apagando ADR Aceito" protect-files bash-escrita-adr-aceito "docs/adr/0001-exemplo.md"
+roda_hook protect-files "não é json"
+bloqueou "entrada que não é JSON" protect-files entrada-invalida ""
+roda_hook protect-files "$(json_write "docs/notas.md")"
+liberou "Write em arquivo comum"
+roda_hook protect-files "$(json_bash "ls -la")"
+liberou "Bash inofensivo"
+
+echo "▶ protect-files nunca grava conteúdo nem valor de variável"
+roda_hook protect-files "$(json_write ".env" "SEGREDO_NO_CONTEUDO_123")"
+sem_o_texto "SEGREDO_NO_CONTEUDO_123" "conteúdo do arquivo não vai para o evento"
+roda_hook protect-files "$(json_bash "echo SEGREDO_NO_COMANDO_456 > .env")"
+sem_o_texto "SEGREDO_NO_COMANDO_456" "texto do comando não vai para o evento"
+rm -f "$(EVENTOS)"
+printf '%s' "$(json_bash "cat .env")" | (cd / && MINHA_VARIAVEL=VALOR_DA_VARIAVEL_789 CLAUDE_PROJECT_DIR="$P" "$RAIZ/.claude/hooks/protect-files.sh") >/dev/null 2>&1
+sem_o_texto "VALOR_DA_VARIAVEL_789" "valor de variável de ambiente não vai para o evento"
+
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de eventos falharam" >&2
   exit 1

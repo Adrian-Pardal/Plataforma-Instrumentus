@@ -4,12 +4,21 @@
 # Entrada: JSON no stdin. Saída: 0 = deixa seguir · 2 = bloqueia (stderr vira o motivo).
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
-bloquear() { echo "🚫 protect-files: $1" >&2; exit 2; }
+# Registro de eventos para a pesquisa (plano 005). Se a lib faltar, o hook bloqueia igual, só sem registrar.
+# shellcheck source=/dev/null  # a lib é conferida à parte pelo verify.sh (.claude/hooks/lib/*.sh)
+source "${BASH_SOURCE[0]%/*}/lib/eventos.sh" 2>/dev/null || registrar_evento() { :; }
+
+# bloquear <mensagem> <código do motivo> [alvo]: registra o evento e sai com 2. O registro nunca muda o código
+# de saída nem o stderr; a lógica de quando bloquear está toda fora daqui.
+bloquear() {
+  registrar_evento bloqueio protect-files "${2:-desconhecido}" "${3:-}"
+  echo "🚫 protect-files: $1" >&2; exit 2
+}
 
 # Falhar "fechado": se não dá para ler a entrada com segurança, bloqueia.
-command -v jq >/dev/null || bloquear "jq não encontrado; hook bloqueando por segurança. Instale o jq (sudo apt install jq)."
+command -v jq >/dev/null || bloquear "jq não encontrado; hook bloqueando por segurança. Instale o jq (sudo apt install jq)." jq-ausente
 ENTRADA=$(cat)
-TOOL=$(jq -r '.tool_name // empty' <<<"$ENTRADA") || bloquear "entrada JSON inválida; hook bloqueando por segurança."
+TOOL=$(jq -r '.tool_name // empty' <<<"$ENTRADA") || bloquear "entrada JSON inválida; hook bloqueando por segurança." entrada-invalida
 CWD=$(jq -r '.cwd // empty' <<<"$ENTRADA")
 CWD="${CWD:-$PWD}"
 
@@ -58,11 +67,11 @@ troca_de_status_permitida() {   # $1 = caminho do ADR
 verificar_arquivo() {
   local caminho="$1" motivo
   if motivo=$(motivo_sensivel "$caminho"); then
-    bloquear "edição bloqueada: $motivo. Edite este arquivo você mesmo, fora do Claude."
+    bloquear "edição bloqueada: $motivo. Edite este arquivo você mesmo, fora do Claude." arquivo-sensivel "$caminho"
   fi
   if eh_adr "$caminho" && adr_aceito "$caminho"; then
     troca_de_status_permitida "$caminho" && return 0
-    bloquear "$caminho é um ADR Aceito e não se edita. Crie um novo ADR que o substitua; no antigo, troque SÓ a linha de Status para 'Substituído por NNNN' (com Edit)."
+    bloquear "$caminho é um ADR Aceito e não se edita. Crie um novo ADR que o substitua; no antigo, troque SÓ a linha de Status para 'Substituído por NNNN' (com Edit)." adr-aceito "$caminho"
   fi
 }
 
@@ -72,12 +81,12 @@ checar_caminho() {
   local motivo
   if motivo=$(motivo_sensivel "$1" "$2"); then
     if [[ "$2" == leitura ]]; then
-      bloquear "o comando leria $motivo ('$3'): o segredo entraria na conversa. Peça ao dono para informar só o que precisa (ex.: os NOMES das variáveis)."
+      bloquear "o comando leria $motivo ('$3'): o segredo entraria na conversa. Peça ao dono para informar só o que precisa (ex.: os NOMES das variáveis)." bash-leitura-segredo "$1"
     fi
-    bloquear "o comando escreveria em $motivo ('$3'). Quem cria/edita este arquivo é o dono, fora do Claude."
+    bloquear "o comando escreveria em $motivo ('$3'). Quem cria/edita este arquivo é o dono, fora do Claude." bash-escrita-sensivel "$1"
   fi
   if [[ "$2" == escrita ]] && eh_adr "$1" && adr_aceito "$1"; then
-    bloquear "o comando alteraria o ADR Aceito '$3'. Para marcá-lo como substituído, use Edit só na linha de Status."
+    bloquear "o comando alteraria o ADR Aceito '$3'. Para marcá-lo como substituído, use Edit só na linha de Status." bash-escrita-adr-aceito "$1"
   fi
 }
 
