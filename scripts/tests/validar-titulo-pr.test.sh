@@ -30,6 +30,9 @@ caso "cada tipo da lista (refactor)"          0 "refactor: simplifica"
 caso "cada tipo da lista (ci)"                0 "ci: fixa o runner"
 caso "cada tipo da lista (build)"             0 "build: ajusta o pom"
 caso "cada tipo da lista (perf)"              0 "perf: acelera o divisor"
+caso "! depois do escopo"                     0 "feat(a)!: troca a escala"
+caso "Unicode na descrição"                   0 "feat: ação ✓"
+caso "só a primeira linha conta"              0 $'feat: ok\nlinha2'
 # As aspas simples são de propósito: o título deve chegar ao script com o $(...) literal, sem expandir.
 # shellcheck disable=SC2016
 caso "descrição com \$ e aspas é só texto"    0 'fix: não executa $(date) nem "aspas"'
@@ -45,6 +48,9 @@ caso "escopo vazio"                           1 "feat(): abre pesquisa"
 caso "escopo em maiúscula"                    1 "feat(CI): abre pesquisa"
 caso "espaço antes do dois-pontos"            1 "feat : abre pesquisa"
 caso "título vazio"                           1 ""
+caso "descrição só de espaços"                1 "feat:   "
+caso "escopo com Unicode"                     1 "fix(ç): x"
+caso "tipo na segunda linha não vale"         1 $'abc\nfeat: x'
 caso "título de revert do GitHub"             1 'Revert "feat: abre pesquisa"'
 
 echo "▶ validar-titulo-pr: erro de uso (2)"
