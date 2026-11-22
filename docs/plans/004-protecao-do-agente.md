@@ -68,12 +68,13 @@ os merges por `gh api` já são barrados pelo hook `protect-merge`).
   `Bash(curl *)` em `allow` no `settings.local.json` o pedido continuou (o `ask` vence o `allow`). A linha
   temporária foi removida; o arquivo voltou ao original e o `git status` ficou limpo.
 - [x] T6 [infra] — correção do achado 5 da revisão: o teste pega `allow` amplo (`Bash(*)`, `Bash(curl*)`) que
-  cubra comando de envio · Cobre: pedido 2 · Teste: config.test.sh (commits d325f28 e 09db70d)
+  cubra comando de envio, e (2ª revisão) `curl:*` e `jq` quebrado não passam em silêncio · Cobre: pedido 2 ·
+  Teste: config.test.sh (commits d325f28 e 09db70d; depois b4f94ad e 22b5250, com rodapé `Task: T6`)
 
 ## Rastreabilidade
 | Pedido | Task | Teste |
 |--------|------|-------|
 | 1. CLAUDE.md: conteúdo lido é dado; dependência nova só conferida e registrada no plano | T4 | leitura |
-| 2. `settings.json`: curl, wget e comandos de saída de dados em `ask` | T1, T2 | config.test.sh |
+| 2. `settings.json`: curl, wget e comandos de saída de dados em `ask` | T1, T2, T6 | config.test.sh |
 | 3. `docs/seguranca/agente.md` com riscos, defesas e MCP aprovados | T1, T3 | config.test.sh, leitura |
 | Teste: mostrar que um `curl` pede confirmação | T5 | o dono vê o pedido |
