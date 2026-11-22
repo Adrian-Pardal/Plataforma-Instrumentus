@@ -2,8 +2,8 @@
 
 ## Onde estamos
 Plano 004 (proteger o próprio agente), fase de revisão concluída; falta a retro e o merge. Branch
-`feat/protecao-do-agente`, PR #24 contra `develop`, CI verde no commit `593ffb1`. Sem push: 1 commit, o
-`docs(handoff)`, que inclui este arquivo, o índice e a atualização do plano (T6 e Rastreabilidade).
+`feat/protecao-do-agente`, PR #24 contra `develop`, CI verde no commit `07dcb6a` (o do handoff, que inclui
+este arquivo, o índice e a atualização do plano: T6 e Rastreabilidade). Commits sem push: nenhum.
 
 ## Feito
 - T1 a T6 do plano 004, em TDD (teste vermelho antes do código na T1/T2 e na T6).
