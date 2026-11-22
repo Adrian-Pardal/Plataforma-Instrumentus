@@ -28,8 +28,11 @@ Decisões:
   sem registros de sessão no período, arquivo de eventos ausente, e intervalo que termina antes do primeiro
   evento (nota "eventos só existem desde AAAA-MM-DD"). Se o intervalo começa antes mas termina depois do
   primeiro evento, as contagens saem com uma linha `bloqueios,cobertura` avisando que são parciais.
-- **Intervalo fechado e em UTC** (`git --since/--until` e `gh --created` aceitam UTC). ERR e sessões são
-  comparados pela data escrita neles.
+- **Intervalo fechado e igual ao DIA LOCAL do fuso da máquina** (00:00:00 do início a 23:59:59 do fim). As duas
+  pontas viram instantes UTC uma vez só (`git --since/--until` e `gh --created` aceitam datas com horário em
+  UTC), e commits, CI e bloqueios usam esses mesmos instantes. ERR e sessões são comparados pela data escrita
+  neles (local). Mudou em 2026-11-22, com a aprovação do dono: o corte em UTC deixava de fora os commits e as
+  execuções feitos depois das 21:00 do último dia (UTC-3).
 - **Commits do HEAD** (branch atual), não de todas as branches: evita contar branches de bot.
 - **Falha do `gh` não derruba a coleta:** o csv sai com a nota e um aviso no stderr (exit 0). Argumento
   faltando, data inválida ou início depois do fim: exit 2 com a mensagem de uso.
@@ -51,7 +54,8 @@ O csv acima. Nenhuma tabela nova.
 - Formato da tabela de intervenções mudar (a skill /handoff a gera) → teste com a tabela no formato da
   skill; tipo desconhecido vira `indefinido`, não some.
 - `gh` sem rede ou sem login → nota e aviso; os testes usam `gh` falso e nunca chamam a rede.
-- Fuso horário nas bordas do intervalo → UTC documentado e teste das duas bordas.
+- Fuso horário nas bordas do intervalo → dia local convertido para UTC uma vez; teste das duas bordas, do commit
+  das 21:30 locais do último dia e do mesmo repositório em dois fusos (UTC-3 e UTC).
 - Limite de 1000 execuções do `gh run list` → nota quando atingido.
 
 ## Critérios de aceite (CA)
@@ -74,7 +78,7 @@ Marque com 🎓 as tasks que você faz à mão. TDD: teste vermelho, depois cód
 - [x] T5 [ambos] — `bloqueios` por hook e nota de cobertura; sem IA · Cobre: CA-2, CA-3, CA-5 · Teste: `coletar-fase.test.sh`
 - [x] T6 [ambos] — `verify.sh` confere `scripts/*/*.sh` com shellcheck · Cobre: CA-6 · Teste: caso novo em `scripts/tests/verify.test.sh`
 - [x] T7 [ambos] — página de help, índice e protocolo §5 · Cobre: CA-7 · Teste: caso em `config.test.sh` (a página existe e o help a lista)
-- [ ] T8 [ambos] — teste real com a Fase 1 · Cobre: CA-8 · Teste: execução real, saída mostrada
+- [x] T8 [ambos] — teste real com a Fase 1 · Cobre: CA-8 · Teste: execução real, saída mostrada
 
 ## Rastreabilidade
 | Requisito | Critério | Task | Teste |
@@ -89,8 +93,7 @@ Marque com 🎓 as tasks que você faz à mão. TDD: teste vermelho, depois cód
 | Pedido | CA-8 | T8 | execução real |
 
 ## Perguntas em aberto
-- Intervalo de datas da Fase 1: o dono ainda não informou. Candidato: 2026-10-25 a 2026-10-28 (primeiro bloco de commits).
-- Fuso (achado na T8): o corte em UTC dá 53 commits para 2026-10-25 a 2026-10-28, contra 59 pela data local
-  (UTC-3). Seis commits feitos entre 21:01 e 21:56 do dia 28 caem no dia 29 em UTC. Decidir com o dono se o
-  intervalo passa a ser o dia local (convertido para UTC uma vez, para commits, CI e bloqueios).
+- Resolvido: Fase 1 = 2026-10-25 a 2026-10-28 (o dono aceitou o candidato em 2026-11-22).
+- Resolvido: fuso. O corte em UTC dava 53 commits e 6 execuções de CI para a Fase 1; o dia local (UTC-3) dá 59 e 11,
+  que batem com `git log` e `gh run list`. O dono aprovou o dia local.
 - Quebrar `commits` por tipo Conventional (feat, fix, docs)? Não foi pedido; fica de fora.

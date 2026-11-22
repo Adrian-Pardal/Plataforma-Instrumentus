@@ -33,8 +33,8 @@ cat > "$TMP/gh-ok/gh" <<'FIM'
 #!/usr/bin/env bash
 pwd > "${GH_CWD_ARQ:-/dev/null}"
 case "$*" in
-  "run list "*"--created 2026-10-25..2026-10-28"*) ;;
-  "run list "*"--created 2026-10-26..2026-10-26"*) echo '[]'; exit 0 ;;
+  "run list "*"--created 2026-10-25T03:00:00Z..2026-10-29T02:59:59Z"*) ;;   # 25 a 28/10, dia local UTC-3, em UTC
+  "run list "*"--created 2026-10-26T03:00:00Z..2026-10-27T02:59:59Z"*) echo '[]'; exit 0 ;;   # só o dia 26/10
   *) echo "gh falso: argumentos inesperados: $*" >&2; exit 1 ;;
 esac
 echo '[{"workflowName":"CI","conclusion":"success"},{"workflowName":"CI","conclusion":"success"},{"workflowName":"CI","conclusion":"failure"},{"workflowName":"CI","conclusion":""}]'
@@ -57,16 +57,19 @@ commit_em() {   # commit_em <pasta> <data ISO UTC>: commit vazio com a data fixa
   GIT_AUTHOR_DATE="$2" GIT_COMMITTER_DATE="$2" git -C "$1" -c user.name=teste -c user.email=teste@exemplo.com \
     -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m "c $2" || { echo "FALHA: commit" >&2; exit 1; }
 }
-# Projeto com 5 commits: 2 FORA do intervalo 2026-10-25..2026-10-28 (um segundo antes e um segundo depois) e 3 dentro,
-# dois deles exatamente nas bordas.
+# Projeto com 6 commits. O intervalo 2026-10-25..2026-10-28 é o DIA LOCAL do fuso do teste (UTC-3, TZ=BRT3), ou
+# seja, de 2026-10-25T03:00:00Z a 2026-10-29T02:59:59Z. Fora: 1 s antes do início e 1 s depois do fim. Dentro: as
+# duas bordas, um commit do meio e o commit das 21:30 locais do último dia (00:30 do dia 29 em UTC), que é o caso
+# real que um corte em UTC deixaria de fora.
 projeto() {   # projeto <nome>; deixa o caminho em P
   P="$TMP/$1"; mkdir -p "$P"
   git init -q -b main "$P" || { echo "FALHA: git init" >&2; exit 1; }
-  commit_em "$P" "2026-10-24T23:59:59Z"
-  commit_em "$P" "2026-10-25T00:00:00Z"
-  commit_em "$P" "2026-10-26T12:00:00Z"
-  commit_em "$P" "2026-10-28T23:59:59Z"
-  commit_em "$P" "2026-10-29T00:00:00Z"
+  commit_em "$P" "2026-10-25T02:59:59Z"   # fora (1 s antes do início local)
+  commit_em "$P" "2026-10-25T03:00:00Z"   # dentro (borda inicial)
+  commit_em "$P" "2026-10-26T12:00:00Z"   # dentro
+  commit_em "$P" "2026-10-29T00:30:00Z"   # dentro (21:30 locais do dia 28)
+  commit_em "$P" "2026-10-29T02:59:59Z"   # dentro (borda final)
+  commit_em "$P" "2026-10-29T03:00:00Z"   # fora (1 s depois do fim local)
 }
 
 # cria_err <id> <data> <categoria>: um ERR de exemplo em P (só o frontmatter importa para a coleta)
@@ -97,7 +100,8 @@ ev_sessao() { printf '{"quando":"%s","tipo":"sessao","hook":"session-start","ver
 coleta() {
   local caminho="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH"
   [[ "${FAKE_GH:-ok}" == ausente ]] && caminho="$TMP/claude-falso:$TMP/bin-sem-gh"   # FAKE_GH=ausente: nenhum gh no PATH
-  ERR=$(cd / && GH_CWD_ARQ="$TMP/gh-cwd" COLETA_RAIZ="$P" PATH="$caminho" "$SCRIPT" "$@" 2>&1 >/dev/null); RC=$?
+  # TZ=BRT3 é o fuso UTC-3 em forma POSIX (não depende de tzdata); TZ_TESTE troca o fuso de um caso.
+  ERR=$(cd / && TZ="${TZ_TESTE:-BRT3}" GH_CWD_ARQ="$TMP/gh-cwd" COLETA_RAIZ="$P" PATH="$caminho" "$SCRIPT" "$@" 2>&1 >/dev/null); RC=$?
 }
 CSV() { echo "$P/docs/pesquisa/dados/$1.csv"; }
 # celula <slug> <metrica> <detalhe> <valor|nota>: o conteúdo da célula (vazio se a linha não existe ou a célula está vazia)
@@ -124,7 +128,11 @@ projeto basico
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere 0 "$RC" "caso feliz: exit 0"
 confere "fase,inicio,fim,metrica,detalhe,valor,nota" "$(head -1 "$(CSV fase-1)")" "cabeçalho do csv"
-confere "Fase 1,2026-10-25,2026-10-28,commits,total,3," "$(grep ',commits,total,' "$(CSV fase-1)")" "commits: 3 (bordas dentro, 1 s fora não conta)"
+confere "Fase 1,2026-10-25,2026-10-28,commits,total,4," "$(grep ',commits,total,' "$(CSV fase-1)")" "commits: 4 (as 2 bordas e o das 21:30 locais do dia 28 entram; 1 s fora não conta)"
+TZ_TESTE=UTC coleta "Fase 1" 2026-10-25 2026-10-28
+confere 3 "$(celula fase-1 commits total valor)" "fuso UTC: o mesmo repositório dá 3 (o das 21:30 locais cai no dia 29 em UTC)"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 4 "$(celula fase-1 commits total valor)" "fuso UTC-3: de volta a 4 (o intervalo é o dia local da máquina)"
 coleta "Fase 1" 2026-10-26 2026-10-26
 confere 1 "$(celula fase-1 commits total valor)" "commits: intervalo de um dia só"
 cp "$(CSV fase-1)" "$TMP/antes.csv"; coleta "Fase 1" 2026-10-26 2026-10-26
@@ -132,7 +140,7 @@ confere true "$(cmp -s "$TMP/antes.csv" "$(CSV fase-1)" && echo true || echo fal
 coleta "Fase de Testes!" 2026-10-25 2026-10-28
 confere true "$([[ -f "$(CSV fase-de-testes)" ]] && echo true || echo false)" "nome vira fase-de-testes.csv"
 coleta "Fase 1, teste" 2026-10-25 2026-10-28
-confere "\"Fase 1, teste\",2026-10-25,2026-10-28,commits,total,3," "$(grep ',commits,total,' "$(CSV fase-1-teste)")" "nome com vírgula vai entre aspas"
+confere "\"Fase 1, teste\",2026-10-25,2026-10-28,commits,total,4," "$(grep ',commits,total,' "$(CSV fase-1-teste)")" "nome com vírgula vai entre aspas"
 P="$TMP/sem-git"; mkdir -p "$P"
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere 0 "$RC" "fora de repositório git: exit 0"
@@ -156,7 +164,7 @@ confere 0 "$RC" "gh falhando: a coleta segue (exit 0)"
 confere "" "$(celula fase-1 ci total valor)" "gh falhando: valor vazio, nunca 0"
 confere "gh indisponível ou sem acesso" "$(celula fase-1 ci total nota)" "gh falhando: a nota diz por quê"
 confere true "$([[ "$ERR" == *aviso* ]] && echo true || echo false)" "gh falhando: aviso no stderr"
-confere 3 "$(celula fase-1 commits total valor)" "gh falhando: as outras métricas continuam"
+confere 4 "$(celula fase-1 commits total valor)" "gh falhando: as outras métricas continuam"
 FAKE_GH=ausente coleta "Fase 1" 2026-10-25 2026-10-28
 confere 0 "$RC" "gh ausente: a coleta segue (exit 0)"
 confere "" "$(celula fase-1 ci total valor)" "gh ausente: valor vazio"
@@ -234,9 +242,9 @@ projeto bloqueios
 cria_eventos \
   "$(ev_sessao 2026-10-24T09:00:00Z)" \
   "$(ev_bloqueio 2026-10-26T10:00:00Z protect-files)" "$(ev_bloqueio 2026-10-26T11:00:00Z protect-files)" \
-  "$(ev_bloqueio 2026-10-27T10:00:00Z protect-push)" "$(ev_bloqueio 2026-10-28T23:59:59Z protect-push)" \
-  "$(ev_bloqueio 2026-10-25T00:00:00Z protect-merge)" "$(ev_bloqueio 2026-10-24T23:59:59Z protect-merge)" \
-  "$(ev_bloqueio 2026-10-29T00:00:00Z stop-verify)" \
+  "$(ev_bloqueio 2026-10-27T10:00:00Z protect-push)" "$(ev_bloqueio 2026-10-29T02:59:59Z protect-push)" \
+  "$(ev_bloqueio 2026-10-25T03:00:00Z protect-merge)" "$(ev_bloqueio 2026-10-25T02:59:59Z protect-merge)" \
+  "$(ev_bloqueio 2026-10-29T03:00:00Z stop-verify)" \
   "$(ev_bloqueio 2026-10-26T12:00:00Z novo-hook)" \
   "isto não é json" "42"
 coleta "Fase 1" 2026-10-25 2026-10-28

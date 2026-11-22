@@ -1,7 +1,7 @@
 # Coleta de dados por fase
 `scripts/pesquisa/coletar-fase.sh "Fase 1" 2026-10-25 2026-10-28` — gera o csv com os números de uma fase da pesquisa, sem chamar nenhuma IA.
 
-Última verificação: 2026-11-22 · Testado com: `scripts/tests/coletar-fase.test.sh` (com `gh` e `claude` falsos) e uma execução real com as datas candidatas da Fase 1
+Última verificação: 2026-11-22 · Testado com: `scripts/tests/coletar-fase.test.sh` (com `gh` e `claude` falsos) e uma execução real na Fase 1 (2026-10-25 a 2026-10-28, fuso UTC-3), conferida contra `git log` e `gh run list`
 
 ## PARA QUE SERVE
 Reúne num só arquivo, por fase, os números que o protocolo pede (docs/pesquisa/protocolo.md): commits (M13),
@@ -19,7 +19,8 @@ ele, esses números ficam espalhados no Git, no `gh`, em docs/erros, nos registr
 - Estar na branch que contém o trabalho da fase: os commits são contados a partir do `HEAD`.
 
 ## PASSO A PASSO
-1. Rodar com o nome da fase e o intervalo (datas no formato AAAA-MM-DD, as duas pontas incluídas).
+1. Rodar com o nome da fase e o intervalo (datas no formato AAAA-MM-DD; vale o DIA LOCAL da sua máquina, do
+   início do primeiro dia ao fim do último).
    ```bash
    scripts/pesquisa/coletar-fase.sh "Fase 1" 2026-10-25 2026-10-28
    ```
@@ -49,19 +50,20 @@ Colunas: `fase,inicio,fim,metrica,detalhe,valor,nota`. Uma linha por número.
 "gh indisponível ou sem acesso"). Zero só aparece quando a fonte existe e não achou nada. Para fases
 anteriores a 2026-11-22, intervenções e bloqueios saem vazios: o protocolo não reconstrói o retrospectivo.
 
-**O intervalo é em UTC** para commits, CI e bloqueios. Num fuso como UTC-3, um commit das 21:30 do último dia
-do intervalo cai no dia seguinte em UTC e fica de fora. ERR e sessões são comparados pela data escrita neles
-(a sua, local). Se um número parecer menor que o esperado, confira primeiro isso.
+**O intervalo é o dia local da sua máquina.** O script converte as duas pontas para UTC uma vez só e usa os
+mesmos instantes para commits, CI e bloqueios (ele imprime a linha "intervalo usado (UTC)"). Na Fase 1, em
+UTC-3, o dia 28 vai até 2026-10-29T02:59:59Z: um commit das 21:30 locais do dia 28 conta. ERR e sessões são
+comparados pela data escrita neles, que também é a local. O fuso vem da variável `TZ` ou da máquina.
 
 ## COMO CONFERIR QUE DEU CERTO
 1. A saída termina com `✔ gravado: docs/pesquisa/dados/fase-1.csv` e o código de saída é 0.
-2. Os commits batem com o Git (troque as datas):
+2. Os commits batem com o Git (troque as datas; o `git` lê a data no seu fuso local):
    ```bash
-   git rev-list --count --since=2026-10-25T00:00:00Z --until=2026-10-28T23:59:59Z HEAD
+   git log --since="2026-10-25 00:00:00" --until="2026-10-28 23:59:59" --oneline | wc -l
    ```
-3. As execuções de CI batem com o `gh`:
+3. As execuções de CI batem com o `gh` (use os dois instantes da linha "intervalo usado (UTC)" que o script imprimiu):
    ```bash
-   gh run list --created "2026-10-25..2026-10-28" --limit 1000 --json databaseId | jq length
+   gh run list --created "2026-10-25T03:00:00Z..2026-10-29T02:59:59Z" --limit 1000 --json databaseId | jq length
    ```
 4. Os testes do script passam:
    ```bash
@@ -73,7 +75,7 @@ do intervalo cai no dia seguinte em UTC e fica de fora. ERR e sessões são comp
 - **`ci` sem valor, nota "gh indisponível":** rode `gh auth status`; sem rede ou sem login o `gh` não responde.
   Corrija e rode de novo.
 - **`ci` com a nota de limite de 1000 execuções:** a fase tem mais execuções do que o `gh` devolve; divida o intervalo.
-- **Número diferente do esperado:** confira o fuso (UTC, acima) e a branch em que você está.
+- **Número diferente do esperado:** confira o fuso (variável `TZ`, acima) e a branch em que você está.
 - **CSV errado ou desatualizado:** não edite à mão. Corrija a fonte (ERR, sessão) e rode de novo: o arquivo é sobrescrito.
 - **Privacidade:** o csv só tem contagens e nomes de hook, categoria e tipo; pode ir para o Git (docs/pesquisa/dados/).
   Os eventos brutos (`.claude/pesquisa/eventos.jsonl`) NUNCA vão.

@@ -3,7 +3,9 @@
 # Uso: scripts/pesquisa/coletar-fase.sh "<nome da fase>" <AAAA-MM-DD início> <AAAA-MM-DD fim>
 # Plano 006, ADR 0007, protocolo em docs/pesquisa/protocolo.md. Usa só git, gh, jq e awk: NENHUMA IA é chamada.
 # Regras:
-#   - intervalo FECHADO nas duas pontas e em UTC; ERR e sessões são comparados pela data escrita neles;
+#   - intervalo FECHADO nas duas pontas e igual ao DIA LOCAL do fuso da máquina (de 00:00:00 do início a 23:59:59 do
+#     fim); as pontas viram instantes UTC uma vez só, e commits, CI e bloqueios usam esses mesmos instantes.
+#     ERR e sessões são comparados pela data escrita neles (que é local, de `date +%F`);
 #   - dado que não existe fica VAZIO (nunca 0) e a coluna "nota" diz por quê;
 #   - o csv só tem números e nomes de hook, categoria ou tipo: nada de conteúdo de conversa;
 #   - COLETA_RAIZ troca a raiz do projeto (só os testes usam).
@@ -22,6 +24,14 @@ data_valida() { [[ "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && "$(date -u -d "$1" +%
 data_valida "$INICIO" || erro "data inicial inválida: use AAAA-MM-DD ('$INICIO')"
 data_valida "$FIM" || erro "data final inválida: use AAAA-MM-DD ('$FIM')"
 [[ ! "$INICIO" > "$FIM" ]] || erro "a data inicial ($INICIO) vem depois da final ($FIM)"
+
+# As duas pontas do intervalo, como instantes UTC. O "date -u -d" leria a entrada como UTC; por isso a conversão
+# passa pelos segundos desde 1970: "date -d" lê no fuso local e "date -u -d @s" escreve em UTC.
+instante_utc() {   # instante_utc <AAAA-MM-DD> <HH:MM:SS>: esse horário LOCAL, escrito em UTC
+  local s; s=$(date -d "$1 $2" +%s 2>/dev/null) && date -u -d "@$s" +%Y-%m-%dT%H:%M:%SZ
+}
+INI_UTC=$(instante_utc "$INICIO" 00:00:00) || erro "não consegui converter a data inicial ($INICIO) para UTC"
+FIM_UTC=$(instante_utc "$FIM" 23:59:59) || erro "não consegui converter a data final ($FIM) para UTC"
 
 # Minúsculas e sem acento (lê o stdin). As alternâncias do sed funcionam byte a byte, em qualquer locale.
 minusculas_sem_acento() {
@@ -50,7 +60,7 @@ coletar_commits() {
   local n
   if ! git -C "$RAIZ" rev-parse --git-dir >/dev/null 2>&1; then
     linha commits total "" "não é um repositório git"
-  elif n=$(git -C "$RAIZ" rev-list --count --since="${INICIO}T00:00:00Z" --until="${FIM}T23:59:59Z" HEAD 2>/dev/null); then
+  elif n=$(git -C "$RAIZ" rev-list --count --since="$INI_UTC" --until="$FIM_UTC" HEAD 2>/dev/null); then
     linha commits total "$n" ""
   else
     linha commits total "" "o git não conseguiu contar os commits"
@@ -65,7 +75,7 @@ coletar_ci() {
   if ! command -v gh >/dev/null 2>&1; then
     linha ci total "" "gh não instalado"; return
   fi
-  if ! json=$(cd "$RAIZ" && gh run list --created "${INICIO}..${FIM}" --limit 1000 --json workflowName,conclusion 2>/dev/null) \
+  if ! json=$(cd "$RAIZ" && gh run list --created "${INI_UTC}..${FIM_UTC}" --limit 1000 --json workflowName,conclusion 2>/dev/null) \
      || ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"$json"; then
     echo "aviso: 'gh run list' falhou; as execuções de CI ficam sem valor" >&2
     linha ci total "" "gh indisponível ou sem acesso"; return
@@ -163,7 +173,7 @@ coletar_intervencoes() {
 # começa antes dele = contagem sai com um aviso de que é parcial. Linhas que não são JSON são ignoradas.
 HOOKS_CONHECIDOS=(protect-files protect-push protect-merge stop-verify)
 coletar_bloqueios() {
-  local arq="$RAIZ/.claude/pesquisa/eventos.jsonl" primeiro n hook
+  local arq="$RAIZ/.claude/pesquisa/eventos.jsonl" primeiro primeiro_dia n hook
   local -A conta=()
   if [[ ! -f "$arq" ]]; then
     linha bloqueios total "" "arquivo de eventos ausente"; return
@@ -172,21 +182,21 @@ coletar_bloqueios() {
   if [[ -z "$primeiro" ]]; then
     linha bloqueios total "" "arquivo de eventos vazio"; return
   fi
-  primeiro="${primeiro:0:10}"
-  if [[ "$FIM" < "$primeiro" ]]; then
-    for hook in "${HOOKS_CONHECIDOS[@]}"; do linha bloqueios "$hook" "" "eventos só existem desde $primeiro"; done
+  primeiro_dia=$(date -d "$primeiro" +%F 2>/dev/null) || primeiro_dia="${primeiro:0:10}"   # o dia local do 1º evento
+  if [[ "$FIM_UTC" < "$primeiro" ]]; then
+    for hook in "${HOOKS_CONHECIDOS[@]}"; do linha bloqueios "$hook" "" "eventos só existem desde $primeiro_dia"; done
     return
   fi
   for hook in "${HOOKS_CONHECIDOS[@]}"; do conta[$hook]=0; done
   while read -r n hook; do
     conta[$hook]=$n
-  done < <(jq -Rr --arg ini "${INICIO}T00:00:00Z" --arg fim "${FIM}T23:59:59Z" \
+  done < <(jq -Rr --arg ini "$INI_UTC" --arg fim "$FIM_UTC" \
              'fromjson? | select(type == "object" and .tipo == "bloqueio" and .quando >= $ini and .quando <= $fim) | .hook // empty' \
              "$arq" 2>/dev/null | sort | uniq -c | awk '{ print $1, $2 }')
   while IFS= read -r hook; do
     linha bloqueios "$hook" "${conta[$hook]}" ""
   done < <(printf '%s\n' "${!conta[@]}" | sort)
-  [[ ! "$INICIO" < "$primeiro" ]] || linha bloqueios cobertura "" "eventos só existem desde $primeiro; contagens parciais"
+  [[ ! "$INI_UTC" < "$primeiro" ]] || linha bloqueios cobertura "" "eventos só existem desde $primeiro_dia; contagens parciais"
 }
 
 coletar_commits
@@ -198,4 +208,5 @@ coletar_bloqueios
 DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
 mkdir -p "${DESTINO%/*}"
 { echo "fase,inicio,fim,metrica,detalhe,valor,nota"; printf '%s\n' "${LINHAS[@]}"; } > "$DESTINO.tmp" && mv "$DESTINO.tmp" "$DESTINO"
+echo "• intervalo usado (UTC): $INI_UTC a $FIM_UTC"
 echo "✔ gravado: ${DESTINO#"$RAIZ"/}"
