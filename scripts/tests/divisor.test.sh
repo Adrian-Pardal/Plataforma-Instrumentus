@@ -69,18 +69,43 @@ caso_segmentos "continuação de linha (\ + quebra) não separa" $'ls \\\n-la'  
 
 # Desempenho: o hook roda em TODO comando Bash. Medido antes da correção: 14 KB levava 5,5 s (quadrático).
 # O limite é folgado de propósito (3 s), para não falhar em máquina lenta.
-caso_desempenho() {   # caso_desempenho <descrição> <repetições> <limite em ms>
-  local descricao="$1" n="$2" limite_ms="$3" cmd="" k ini fim ms
-  for ((k = 0; k < n; k++)); do cmd+='echo "x;y" && '; done
-  cmd+="ls"
-  ini=${EPOCHREALTIME/./}; dividir_comando "$cmd"; fim=${EPOCHREALTIME/./}
-  ms=$(((fim - ini) / 1000))
-  if [[ ${#SEGMENTOS[@]} -eq $((n + 1)) && $ms -le $limite_ms ]]; then
-    echo "  ok    $descricao (${ms} ms)"
+# Cada caso vale a MELHOR de até 3 execuções (melhor_de_3 para na primeira que cabe no limite). É uma troca
+# consciente: o relógio da máquina oscila (um caso de 1,0 s já deu 2,09 s) e isso não deve reprovar o CI; em
+# compensação, uma regressão só um pouco acima do limite pode passar numa das execuções. Uma regressão
+# quadrática de verdade (5,5 s contra 3 s) passa do limite em TODAS e continua reprovando.
+melhor_de_3() {   # melhor_de_3 <limite em ms> <função> [argumentos...]
+  # Deixa em MELHOR_MS o menor tempo e em EXECUCOES quantas vezes rodou.
+  local limite_ms="$1" medida="$2" ini fim ms
+  shift 2
+  MELHOR_MS="" EXECUCOES=0
+  while ((EXECUCOES < 3)); do
+    EXECUCOES=$((EXECUCOES + 1))
+    ini=${EPOCHREALTIME/./}; "$medida" "$@"; fim=${EPOCHREALTIME/./}
+    ms=$(((fim - ini) / 1000))
+    if [[ -z $MELHOR_MS ]] || ((ms < MELHOR_MS)); then MELHOR_MS=$ms; fi
+    if ((MELHOR_MS <= limite_ms)); then break; fi
+  done
+}
+
+relatar_desempenho() {   # relatar_desempenho <descrição> <segmentos obtidos> <segmentos esperados> <limite em ms>
+  # O nº de segmentos é o da última execução: o divisor zera o estado a cada chamada e a entrada é a mesma,
+  # então qualquer execução daria o mesmo.
+  local descricao="$1" obtidos="$2" esperados="$3" limite_ms="$4" sufixo=""
+  if ((EXECUCOES > 1)); then sufixo=", a melhor de $EXECUCOES execuções"; fi
+  if ((obtidos == esperados && MELHOR_MS <= limite_ms)); then
+    echo "  ok    $descricao (${MELHOR_MS} ms${sufixo})"
   else
-    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmentos (esperado $((n + 1))) em ${ms} ms (limite ${limite_ms} ms)" >&2
+    echo "  FALHA $descricao: $obtidos segmento(s) (esperado $esperados) em ${MELHOR_MS} ms após $EXECUCOES execução(ões) (limite ${limite_ms} ms)" >&2
     falhas=$((falhas + 1))
   fi
+}
+
+caso_desempenho() {   # caso_desempenho <descrição> <repetições> <limite em ms>
+  local descricao="$1" n="$2" limite_ms="$3" cmd="" k
+  for ((k = 0; k < n; k++)); do cmd+='echo "x;y" && '; done
+  cmd+="ls"
+  melhor_de_3 "$limite_ms" dividir_comando "$cmd"
+  relatar_desempenho "$descricao" "${#SEGMENTOS[@]}" $((n + 1)) "$limite_ms"
 }
 echo "▶ divisor: desempenho"
 caso_desempenho "comando de 14 KB (1000 comandos)" 1000 3000
@@ -531,21 +556,18 @@ echo "▶ falha fechada (T7d): PROTEGIDOS vazia ou ausente bloqueia o que é ini
 caso_falha_fechada_sem "PROTEGIDOS vazia"                $'git commit -m "$(date)"'                 vazia
 caso_falha_fechada_sem "PROTEGIDOS ausente"              $'echo "$(date)"'                          ausente
 
+pipeline_completo() {   # pipeline_completo <comando>: o que o hook faz com um comando
+  local s
+  dividir_comando "$1"
+  for s in "${SEGMENTOS[@]}"; do analisar_segmento "$s"; falha_fechada; done
+}
+
 caso_pipeline() {   # caso_pipeline <descrição> <comando> <segmentos esperados> <limite em ms>
-  local descricao="$1" cmd="$2" esp_seg="$3" limite_ms="$4" ini fim ms s
+  local descricao="$1" cmd="$2" esp_seg="$3" limite_ms="$4"
   # shellcheck disable=SC2034  # PROTEGIDOS é lida por falha_fechada, em divisor.sh
   PROTEGIDOS=("git push" "gh pr merge" "gh api" "gh alias")
-  ini=${EPOCHREALTIME/./}
-  dividir_comando "$cmd"
-  for s in "${SEGMENTOS[@]}"; do analisar_segmento "$s"; falha_fechada; done
-  fim=${EPOCHREALTIME/./}
-  ms=$(((fim - ini) / 1000))
-  if [[ ${#SEGMENTOS[@]} -eq $esp_seg && $ms -le $limite_ms ]]; then
-    echo "  ok    $descricao (${ms} ms)"
-  else
-    echo "  FALHA $descricao: ${#SEGMENTOS[@]} segmento(s) (esperado $esp_seg) em ${ms} ms (limite ${limite_ms} ms)" >&2
-    falhas=$((falhas + 1))
-  fi
+  melhor_de_3 "$limite_ms" pipeline_completo "$cmd"
+  relatar_desempenho "$descricao" "${#SEGMENTOS[@]}" "$esp_seg" "$limite_ms"
 }
 
 texto_grande() {   # texto_grande <KB>: texto simples com linhas, sem aspas nem separadores
