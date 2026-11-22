@@ -2,7 +2,7 @@
 
 - **Spec:** nenhuma. Fonte dos requisitos: o pedido do dono em 2026-11-22, o ADR 0007 e o protocolo
   (docs/pesquisa/protocolo.md). Exceção autorizada pelo dono (a skill `planejar` exige spec Aprovada).
-- **Status:** Aprovado (dono, 2026-11-22)
+- **Status:** Concluído (aprovado pelo dono em 2026-11-22; 8 tasks feitas e verificadas pelo dono)
 - **Data:** 2026-11-22
 
 ## Visão técnica
@@ -93,7 +93,7 @@ Marque com 🎓 as tasks que você faz à mão. TDD: teste vermelho, depois cód
 | Pedido | CA-8 | T8 | execução real |
 
 ## Perguntas em aberto
-- Resolvido: Fase 1 = 2026-10-25 a 2026-10-28 (o dono aceitou o candidato em 2026-11-22).
+- Resolvido: Fase 1 = 2026-10-25 a 2026-10-28 (o dono confirmou o intervalo em 2026-11-22).
 - Resolvido: fuso. O corte em UTC dava 53 commits e 6 execuções de CI para a Fase 1; o dia local (UTC-3) dá 59 e 11,
   que batem com `git log` e `gh run list`. O dono aprovou o dia local.
 - Quebrar `commits` por tipo Conventional (feat, fix, docs)? Não foi pedido; fica de fora.

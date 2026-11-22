@@ -12,4 +12,4 @@ ORDEM construir o que a spec (ou o ADR, quando não há spec) pede. Só se imple
 | 003 | [Título do PR em Conventional Commits, estratégia de merge e regra no CLAUDE.md](003-titulo-do-pr-e-estrategia-de-merge.md) | Aprovado | 2026-11-21 |
 | 004 | [Proteger o próprio agente: conteúdo lido é dado, saída de dados pede confirmação, MCP aprovado](004-protecao-do-agente.md) | Aprovado | 2026-11-22 |
 | 005 | [Registro de eventos do harness para a pesquisa](005-registro-de-eventos-do-harness.md) | Concluído | 2026-11-22 |
-| 006 | [Coleta de dados por fase da pesquisa](006-coleta-de-dados-por-fase.md) | Aprovado | 2026-11-22 |
+| 006 | [Coleta de dados por fase da pesquisa](006-coleta-de-dados-por-fase.md) | Concluído | 2026-11-22 |
