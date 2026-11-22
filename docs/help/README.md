@@ -24,6 +24,7 @@ Modelo para novas páginas: `docs/templates/help.md`.
 | Conferir, refazer ou afrouxar as regras de proteção da develop e da main | ferramentas/protecao-de-branches.md |
 | Subir o Collector de telemetria da pesquisa (tokens e tempo) e conferir os arquivos | ferramentas/telemetria.md |
 | Ler o registro dos bloqueios dos hooks e do início das sessões (pesquisa) | ferramentas/eventos-do-harness.md |
+| Gerar o csv de números de uma fase da pesquisa (commits, CI, erros, intervenções, bloqueios) | ferramentas/coleta-por-fase.md |
 
 ## help × runbooks
 

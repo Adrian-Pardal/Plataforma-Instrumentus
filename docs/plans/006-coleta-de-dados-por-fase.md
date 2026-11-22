@@ -67,13 +67,13 @@ O csv acima. Nenhuma tabela nova.
 ## Tasks
 Marque com 🎓 as tasks que você faz à mão. TDD: teste vermelho, depois código.
 
-- [ ] T1 [ambos] — argumentos, nome do arquivo, csv e `commits` · Cobre: CA-1, CA-2, CA-4 · Teste: `scripts/tests/coletar-fase.test.sh`
-- [ ] T2 [ambos] — `ci` via gh, incluindo a falha do gh · Cobre: CA-2, CA-3 · Teste: `coletar-fase.test.sh`
-- [ ] T3 [ambos] — `err` por categoria · Cobre: CA-2, CA-3 · Teste: `coletar-fase.test.sh`
-- [ ] T4 [ambos] — `intervencoes` das sessões · Cobre: CA-2, CA-3 · Teste: `coletar-fase.test.sh`
-- [ ] T5 [ambos] — `bloqueios` por hook e nota de cobertura; sem IA · Cobre: CA-2, CA-3, CA-5 · Teste: `coletar-fase.test.sh`
-- [ ] T6 [ambos] — `verify.sh` confere `scripts/*/*.sh` com shellcheck · Cobre: CA-6 · Teste: caso novo em `scripts/tests/verify.test.sh`
-- [ ] T7 [ambos] — página de help, índice e protocolo §5 · Cobre: CA-7 · Teste: caso em `config.test.sh` (a página existe e o help a lista)
+- [x] T1 [ambos] — argumentos, nome do arquivo, csv e `commits` · Cobre: CA-1, CA-2, CA-4 · Teste: `scripts/tests/coletar-fase.test.sh`
+- [x] T2 [ambos] — `ci` via gh, incluindo a falha do gh · Cobre: CA-2, CA-3 · Teste: `coletar-fase.test.sh`
+- [x] T3 [ambos] — `err` por categoria · Cobre: CA-2, CA-3 · Teste: `coletar-fase.test.sh`
+- [x] T4 [ambos] — `intervencoes` das sessões · Cobre: CA-2, CA-3 · Teste: `coletar-fase.test.sh`
+- [x] T5 [ambos] — `bloqueios` por hook e nota de cobertura; sem IA · Cobre: CA-2, CA-3, CA-5 · Teste: `coletar-fase.test.sh`
+- [x] T6 [ambos] — `verify.sh` confere `scripts/*/*.sh` com shellcheck · Cobre: CA-6 · Teste: caso novo em `scripts/tests/verify.test.sh`
+- [x] T7 [ambos] — página de help, índice e protocolo §5 · Cobre: CA-7 · Teste: caso em `config.test.sh` (a página existe e o help a lista)
 - [ ] T8 [ambos] — teste real com a Fase 1 · Cobre: CA-8 · Teste: execução real, saída mostrada
 
 ## Rastreabilidade
@@ -90,4 +90,7 @@ Marque com 🎓 as tasks que você faz à mão. TDD: teste vermelho, depois cód
 
 ## Perguntas em aberto
 - Intervalo de datas da Fase 1: o dono ainda não informou. Candidato: 2026-10-25 a 2026-10-28 (primeiro bloco de commits).
+- Fuso (achado na T8): o corte em UTC dá 53 commits para 2026-10-25 a 2026-10-28, contra 59 pela data local
+  (UTC-3). Seis commits feitos entre 21:01 e 21:56 do dia 28 caem no dia 29 em UTC. Decidir com o dono se o
+  intervalo passa a ser o dia local (convertido para UTC uma vez, para commits, CI e bloqueios).
 - Quebrar `commits` por tipo Conventional (feat, fix, docs)? Não foi pedido; fica de fora.
