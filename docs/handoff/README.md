@@ -5,6 +5,7 @@ a partir de `docs/templates/handoff.md`. O mais recente fica no topo.
 
 | Data | Assunto | Arquivo |
 |------|---------|---------|
+| 2026-11-22 | título do PR e estratégia de merge (planos 002 e 003, ADR 0006) | [2026-11-22-titulo-do-pr-e-estrategia-de-merge.md](2026-11-22-titulo-do-pr-e-estrategia-de-merge.md) |
 | 2026-11-21 | registro de erros (plano 002) | [2026-11-21-registro-de-erros.md](2026-11-21-registro-de-erros.md) |
 | 2026-11-21 | divisor de comandos (T7e–T7f) | [2026-11-21-divisor-t7e-t7f.md](2026-11-21-divisor-t7e-t7f.md) |
 | 2026-11-21 | divisor de comandos (T7b–T7d) | [2026-11-21-divisor-de-comandos.md](2026-11-21-divisor-de-comandos.md) |
