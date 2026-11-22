@@ -58,7 +58,9 @@ rodar_testes_dos_scripts() {
   for t in "$RAIZ"/scripts/tests/*.test.sh; do
     [[ -f "$t" ]] || continue   # sem arquivos, o glob fica literal: ignora
     echo "▶ ${t#"$RAIZ"/}"
-    "$t" || falhou=$((falhou + 1))
+    # Sem CLAUDE_PROJECT_DIR: o hook Stop chama este script com ela apontando para o projeto real, e os testes dos
+    # hooks gravariam eventos falsos em .claude/pesquisa/eventos.jsonl (plano 005, T2).
+    env -u CLAUDE_PROJECT_DIR "$t" || falhou=$((falhou + 1))
   done
   if [[ $falhou -gt 0 ]]; then
     echo "✖ $falhou teste(s) de script falharam." >&2
@@ -76,7 +78,8 @@ rodar_shellcheck() {
   local -a arquivos=()
   local f
   # lib/*.sh não tem shebang: sem "# shellcheck shell=bash" no topo, o próprio shellcheck reprova (SC2148).
-  for f in "$RAIZ"/.claude/hooks/*.sh "$RAIZ"/.claude/hooks/lib/*.sh "$RAIZ"/scripts/*.sh "$RAIZ"/scripts/tests/*.sh; do
+  # scripts/*/*.sh cobre scripts/tests/ e as demais subpastas (scripts/pesquisa/...): subpasta nova entra sozinha.
+  for f in "$RAIZ"/.claude/hooks/*.sh "$RAIZ"/.claude/hooks/lib/*.sh "$RAIZ"/scripts/*.sh "$RAIZ"/scripts/*/*.sh; do
     [[ -f "$f" ]] && arquivos+=("$f")
   done
   [[ ${#arquivos[@]} -gt 0 ]] || return 0

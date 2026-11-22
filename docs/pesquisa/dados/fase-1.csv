@@ -1,0 +1,11 @@
+fase,inicio,fim,metrica,detalhe,valor,nota
+Fase 1,2026-10-25,2026-10-28,commits,total,59,
+Fase 1,2026-10-25,2026-10-28,ci,total,11,
+Fase 1,2026-10-25,2026-10-28,ci,CI/cancelled,1,
+Fase 1,2026-10-25,2026-10-28,ci,CI/success,10,
+Fase 1,2026-10-25,2026-10-28,err,ambiente,0,
+Fase 1,2026-10-25,2026-10-28,err,bug,1,
+Fase 1,2026-10-25,2026-10-28,err,erro-ia,0,
+Fase 1,2026-10-25,2026-10-28,err,producao,0,
+Fase 1,2026-10-25,2026-10-28,intervencoes,total,,sem registros de sessão no período
+Fase 1,2026-10-25,2026-10-28,bloqueios,total,,arquivo de eventos ausente

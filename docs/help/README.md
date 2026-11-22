@@ -22,6 +22,9 @@ Modelo para novas páginas: `docs/templates/help.md`.
 | Abrir issue de erro, criar as etiquetas ou entender a issue que o CI abre sozinho | ferramentas/registro-de-erros.md |
 | Pedir o merge de um PR na develop ou entender um bloqueio do protect-merge | ferramentas/merge-de-pr.md |
 | Conferir, refazer ou afrouxar as regras de proteção da develop e da main | ferramentas/protecao-de-branches.md |
+| Subir o Collector de telemetria da pesquisa (tokens e tempo) e conferir os arquivos | ferramentas/telemetria.md |
+| Ler o registro dos bloqueios dos hooks e do início das sessões (pesquisa) | ferramentas/eventos-do-harness.md |
+| Gerar o csv de números de uma fase da pesquisa (commits, CI, erros, intervenções, bloqueios) | ferramentas/coleta-por-fase.md |
 
 ## help × runbooks
 

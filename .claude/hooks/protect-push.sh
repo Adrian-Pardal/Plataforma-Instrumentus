@@ -5,15 +5,25 @@
 # Saída: 0 = liberado (ou não é push) · 2 = bloqueado (o stderr é mostrado ao Claude e o comando NÃO roda).
 set -uo pipefail   # sem -e de propósito: cada ramo decide seu próprio código de saída
 
-bloquear() { echo "🚫 protect-push: $1" >&2; exit 2; }
+# Registro de eventos para a pesquisa (plano 005). Se a lib faltar, o hook bloqueia igual, só sem registrar.
+# shellcheck source=/dev/null  # a lib é conferida à parte pelo verify.sh (.claude/hooks/lib/*.sh)
+source "${BASH_SOURCE[0]%/*}/lib/eventos.sh" 2>/dev/null || registrar_evento() { :; }
+
+# bloquear <mensagem> <código do motivo> [alvo]: registra o evento e sai com 2. O registro nunca muda o código
+# de saída nem o stderr; a lógica de quando bloquear está toda fora daqui.
+# O alvo é só nome de branch ou refspec. Nunca o remoto: pode ser uma URL com credencial.
+bloquear() {
+  registrar_evento bloqueio protect-push "${2:-desconhecido}" "${3:-}"
+  echo "🚫 protect-push: $1" >&2; exit 2
+}
 
 # Só estes prefixos de branch podem receber push. Isso exclui main, develop, nomes soltos ("foo") e tags ("v1.0").
 PREFIXOS_OK='feat/|fix/|docs/|test/|refactor/|chore/|hotfix/'
 prefixo_ok() { [[ "$1" =~ ^($PREFIXOS_OK). ]]; }
 
-command -v jq >/dev/null || bloquear "jq não encontrado; não consegui ler o comando, então bloqueio por segurança."
+command -v jq >/dev/null || bloquear "jq não encontrado; não consegui ler o comando, então bloqueio por segurança." jq-ausente
 ENTRADA=$(cat)
-CMD=$(jq -r '.tool_input.command // empty' <<<"$ENTRADA") || bloquear "entrada JSON inválida."
+CMD=$(jq -r '.tool_input.command // empty' <<<"$ENTRADA") || bloquear "entrada JSON inválida." entrada-invalida
 [[ -n "$CMD" ]] || exit 0
 
 CWD=$(jq -r '.cwd // empty' <<<"$ENTRADA")
@@ -29,15 +39,15 @@ validar_opcoes() {   # argumentos depois de "push"
   while [[ $# -gt 0 ]]; do
     A="$1"; shift
     case "$A" in
-      --force|--force-with-lease*|--force-if-includes) bloquear "push forçado ($A) não é permitido." ;;
-      --mirror|--all|--tags|--delete|--prune) bloquear "'git push $A' não é permitido (pode apagar ou sobrescrever coisas no remoto)." ;;
-      --repo|--repo=*|--receive-pack|--receive-pack=*|--exec|--exec=*) bloquear "a opção '$A' não é permitida (troca o destino ou o programa do push)." ;;
+      --force|--force-with-lease*|--force-if-includes) bloquear "push forçado ($A) não é permitido." push-forcado ;;
+      --mirror|--all|--tags|--delete|--prune) bloquear "'git push $A' não é permitido (pode apagar ou sobrescrever coisas no remoto)." push-opcao-destrutiva ;;
+      --repo|--repo=*|--receive-pack|--receive-pack=*|--exec|--exec=*) bloquear "a opção '$A' não é permitida (troca o destino ou o programa do push)." push-opcao-proibida ;;
       --push-option=*) ;;
       --push-option|-o) shift ;;                                  # opções que carregam um valor
       --*) ;;                                                     # outras opções longas (--dry-run, --set-upstream...)
       -?*)                                                        # opções curtas, possivelmente juntas (-fu, -df)
-        [[ "$A" == *f* ]] && bloquear "push forçado ($A) não é permitido."
-        [[ "$A" == *d* ]] && bloquear "'git push $A' (delete) não é permitido." ;;
+        [[ "$A" == *f* ]] && bloquear "push forçado ($A) não é permitido." push-forcado
+        [[ "$A" == *d* ]] && bloquear "'git push $A' (delete) não é permitido." push-delete ;;
       *) if [[ -z "$REMOTO" ]]; then REMOTO="$A"; else REFS+=("$A"); fi ;;
     esac
   done
@@ -53,26 +63,26 @@ validar_destinos() {   # $1 = pasta onde o git roda
     REMOTO=$(git -C "$DIR" config "branch.$ATUAL.remote" 2>/dev/null) || REMOTO=""
     [[ -n "$REMOTO" ]] || REMOTO="origin"
   fi
-  [[ "$REMOTO" == "origin" ]] || bloquear "só é permitido dar push para 'origin' (você usou '$REMOTO')."
+  [[ "$REMOTO" == "origin" ]] || bloquear "só é permitido dar push para 'origin' (você usou '$REMOTO')." remoto-nao-permitido
 
   # Sem branch explícita, o git envia a branch atual.
   if [[ ${#REFS[@]} -eq 0 ]]; then
-    prefixo_ok "$ATUAL" || bloquear "'git push' sem destino estando na branch '${ATUAL:-(nenhuma)}'. Só são permitidas branches com prefixo ${PREFIXOS_OK//|/ }."
+    prefixo_ok "$ATUAL" || bloquear "'git push' sem destino estando na branch '${ATUAL:-(nenhuma)}'. Só são permitidas branches com prefixo ${PREFIXOS_OK//|/ }." destino-nao-permitido "$ATUAL"
     return 0
   fi
 
   local R DEST
   for R in "${REFS[@]}"; do
-    [[ "$R" == +* ]] && bloquear "refspec com '+' ($R) é push forçado."
+    [[ "$R" == +* ]] && bloquear "refspec com '+' ($R) é push forçado." push-forcado "$R"
     if [[ "$R" == *:* ]]; then
-      [[ "$R" == :* ]] && bloquear "refspec '$R' apaga a branch no remoto."
+      [[ "$R" == :* ]] && bloquear "refspec '$R' apaga a branch no remoto." push-delete "$R"
       DEST="${R##*:}"
     else
       DEST="$R"
     fi
     DEST="${DEST#refs/heads/}"
     [[ "$DEST" == "HEAD" ]] && DEST="$ATUAL"      # "git push origin HEAD" envia para a branch atual
-    prefixo_ok "$DEST" || bloquear "destino '$DEST' (de '$R') não é permitido. Só são permitidas branches com prefixo ${PREFIXOS_OK//|/ } (tags e main/develop ficam com o dono)."
+    prefixo_ok "$DEST" || bloquear "destino '$DEST' (de '$R') não é permitido. Só são permitidas branches com prefixo ${PREFIXOS_OK//|/ } (tags e main/develop ficam com o dono)." destino-nao-permitido "$DEST"
   done
   return 0
 }

@@ -4,6 +4,9 @@
 !.env.example
 .claude/settings.local.json
 
+# Dados privados da pesquisa (ADR 0007): eventos dos hooks. Nunca vão para o Git.
+.claude/pesquisa/
+
 # Segredos novos: pasta secrets/ e chaves/certificados
 secrets/
 *.pem

@@ -162,5 +162,23 @@ while IFS= read -r nome; do
   grep -qF "\`$nome\`" <<<"$aprovados"; confere "allow de mcp__${nome}__* é de servidor aprovado" "$?"
 done < <(jq -r '.permissions.allow[] | select(startswith("mcp__")) | split("__")[1]' "$RAIZ/.claude/settings.json")
 
+echo "▶ config: registro de eventos da pesquisa (plano 005)"
+# O hook SessionStart grava a linha de início de sessão. Todo comando de hook do settings.json aponta para um
+# script que existe e é executável.
+jq -e '[.hooks.SessionStart[]?.hooks[]?.command] | any(contains("session-start.sh"))' "$RAIZ/.claude/settings.json" >/dev/null 2>&1
+confere "settings.json registra o hook SessionStart (session-start.sh)" "$?"
+[[ -x "$RAIZ/.claude/hooks/session-start.sh" ]]; confere "session-start.sh existe e é executável" "$?"
+# Os eventos são dados privados da pesquisa (ADR 0007): nunca vão para o Git.
+grep -qxF '.claude/pesquisa/' "$RAIZ/.gitignore"; confere ".gitignore lista .claude/pesquisa/" "$?"
+git -C "$RAIZ" check-ignore -q .claude/pesquisa/eventos.jsonl; confere "o Git ignora .claude/pesquisa/eventos.jsonl" "$?"
+# A skill /handoff também gera o registro da sessão para a pesquisa: precisa citar de onde lê os bloqueios e onde grava.
+HANDOFF="$RAIZ/.claude/skills/handoff/SKILL.md"
+grep -qF '.claude/pesquisa/eventos.jsonl' "$HANDOFF"; confere "a skill handoff lê .claude/pesquisa/eventos.jsonl" "$?"
+grep -qF 'docs/pesquisa/sessoes/' "$HANDOFF"; confere "a skill handoff grava em docs/pesquisa/sessoes/" "$?"
+# O script de coleta por fase (plano 006) tem página no help, listada no índice, e o protocolo cita o script.
+[[ -f "$RAIZ/docs/help/ferramentas/coleta-por-fase.md" ]]; confere "existe docs/help/ferramentas/coleta-por-fase.md" "$?"
+grep -qF 'ferramentas/coleta-por-fase.md' "$RAIZ/docs/help/README.md"; confere "o índice do help lista coleta-por-fase.md" "$?"
+grep -qF 'scripts/pesquisa/coletar-fase.sh' "$RAIZ/docs/pesquisa/protocolo.md"; confere "o protocolo cita scripts/pesquisa/coletar-fase.sh" "$?"
+
 if [[ $falhas -gt 0 ]]; then echo "✖ $falhas caso(s) falharam" >&2; exit 1; fi
 echo "✔ todos os casos passaram"
