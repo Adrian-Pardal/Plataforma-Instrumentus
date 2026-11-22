@@ -1,4 +1,16 @@
+---
+titulo: Handoffs
+proposito: Indexar os bilhetes de passagem de contexto entre sessões
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /handoff
+relacionados: [../templates/handoff.md, ../estudo-de-caso/sessoes/README.md]
+---
+
 # Handoffs
+
+**Esta pasta responde:** onde parei na última sessão e qual é o primeiro passo?
+**Mantida por:** `/handoff`
 
 Um arquivo por sessão, `AAAA-MM-DD-<assunto>.md`, criado pela skill `/handoff`
 a partir de `docs/templates/handoff.md`. O mais recente fica no topo.

@@ -1,4 +1,16 @@
+---
+titulo: Manual do operador
+proposito: Indexar as rotinas manuais e as ferramentas que só um humano mantém
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../templates/help.md, ../README.md]
+---
+
 # Manual do operador
+
+**Esta pasta responde:** como mantenho, atualizo ou confiro uma ferramenta ou rotina manual?
+**Mantida por:** manual (cada página nasce junto da ferramenta que descreve)
 
 Rotinas que só um humano faz para o projeto continuar funcionando:
 atualizar, manter, conferir, renovar. Estilo do `man`: cada página

@@ -1,3 +1,12 @@
+---
+titulo: Telemetria da pesquisa (Collector local)
+proposito: Subir o Collector OpenTelemetry local e conferir os arquivos de tokens e tempo
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../../estudo-de-caso/protocolo.md, ../../adr/0007-registro-de-dados-para-pesquisa.md, eventos-do-harness.md]
+---
+
 # Telemetria da pesquisa
 `docker compose up -d` — sobe um Collector OpenTelemetry local que grava as métricas e os logs do Claude Code em arquivos JSON.
 
@@ -5,7 +14,7 @@
 
 ## PARA QUE SERVE
 Alimenta as métricas M10 (tokens) e M11 (tempo) do protocolo da pesquisa
-(docs/pesquisa/protocolo.md). Sem isso, o custo em tokens e tempo só existe
+(docs/estudo-de-caso/protocolo.md). Sem isso, o custo em tokens e tempo só existe
 nas transcrições locais, que podem ser apagadas.
 
 ## QUANDO FAZER
@@ -81,8 +90,8 @@ Code segue funcionando, mas os dados daquele período se perdem.
 - **Parar de coletar:** `docker compose down` e remova o bloco `env` do settings.json.
 
 ## VER TAMBÉM
-- docs/pesquisa/protocolo.md (métricas M10 e M11)
+- docs/estudo-de-caso/protocolo.md (métricas M10 e M11)
 - docs/adr/0007-registro-de-dados-para-pesquisa.md
 - Rotação: cada arquivo vira `metricas-<data>-size.json` ao passar de 20 MB; acima de 500
   arquivos antigos o Collector apaga os mais velhos. Copie derivados para
-  docs/pesquisa/dados/ de tempos em tempos. Os arquivos brutos NUNCA vão ao repositório.
+  docs/estudo-de-caso/dados/ de tempos em tempos. Os arquivos brutos NUNCA vão ao repositório.

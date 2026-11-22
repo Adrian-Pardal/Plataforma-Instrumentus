@@ -1,3 +1,12 @@
+---
+titulo: <nome da rotina ou ferramenta>
+proposito: <uma frase: o que esta rotina mantém funcionando>
+status: rascunho
+atualizado: AAAA-MM-DD
+mantido-por: manual
+relacionados: [../README.md]
+---
+
 # NOME
 `<comando ou tarefa>` — <resumo em uma linha>
 

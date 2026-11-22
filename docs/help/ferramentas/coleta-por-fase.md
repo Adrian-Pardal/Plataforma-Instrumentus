@@ -1,10 +1,19 @@
+---
+titulo: Coleta de dados por fase
+proposito: Gerar o csv com os números de uma fase do estudo de caso, sem chamar nenhuma IA
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../../estudo-de-caso/protocolo.md, ../../plans/006-coleta-de-dados-por-fase.md, eventos-do-harness.md]
+---
+
 # Coleta de dados por fase
 `scripts/pesquisa/coletar-fase.sh "Fase 1" 2026-10-25 2026-10-28` — gera o csv com os números de uma fase da pesquisa, sem chamar nenhuma IA.
 
 Última verificação: 2026-11-22 · Testado com: `scripts/tests/coletar-fase.test.sh` (com `gh` e `claude` falsos) e uma execução real na Fase 1 (2026-10-25 a 2026-10-28, fuso UTC-3), conferida contra `git log` e `gh run list`
 
 ## PARA QUE SERVE
-Reúne num só arquivo, por fase, os números que o protocolo pede (docs/pesquisa/protocolo.md): commits (M13),
+Reúne num só arquivo, por fase, os números que o protocolo pede (docs/estudo-de-caso/protocolo.md): commits (M13),
 execuções de CI (M7), erros por categoria (M3), intervenções humanas (M1) e bloqueios por hook (M4). Sem
 ele, esses números ficam espalhados no Git, no `gh`, em docs/erros, nos registros de sessão e nos eventos dos hooks.
 
@@ -24,14 +33,14 @@ ele, esses números ficam espalhados no Git, no `gh`, em docs/erros, nos registr
    ```bash
    scripts/pesquisa/coletar-fase.sh "Fase 1" 2026-10-25 2026-10-28
    ```
-   O nome vira o nome do arquivo: `docs/pesquisa/dados/fase-1.csv` (minúsculas, sem acento, hífen no lugar de espaço).
+   O nome vira o nome do arquivo: `docs/estudo-de-caso/dados/fase-1.csv` (minúsculas, sem acento, hífen no lugar de espaço).
 2. Ler o resultado.
    ```bash
-   cat docs/pesquisa/dados/fase-1.csv
+   cat docs/estudo-de-caso/dados/fase-1.csv
    ```
 3. Ver só uma métrica (a 4ª coluna é a métrica).
    ```bash
-   awk -F, '$4=="err"' docs/pesquisa/dados/fase-1.csv
+   awk -F, '$4=="err"' docs/estudo-de-caso/dados/fase-1.csv
    ```
 
 ## COMO LER O CSV
@@ -42,7 +51,7 @@ Colunas: `fase,inicio,fim,metrica,detalhe,valor,nota`. Uma linha por número.
 | commits | total | `git`, branch atual |
 | ci | total e `<workflow>/<resultado>` (sem resultado: `em-andamento`) | `gh run list` |
 | err | bug, erro-ia, ambiente, producao (e outras que existirem), `sem-data-ou-categoria` | `data:` e `categoria:` de docs/erros/ERR-*.md |
-| intervencoes | decisao, aprovacao, correcao, operacao-manual, desbloqueio, aprendizado, indefinido, total, sessoes-lidas, `sessoes-sem-tabela` | tabela "Intervenções humanas" de docs/pesquisa/sessoes/ |
+| intervencoes | decisao, aprovacao, correcao, operacao-manual, desbloqueio, aprendizado, indefinido, total, sessoes-lidas, `sessoes-sem-tabela` | tabela "Intervenções humanas" de docs/estudo-de-caso/sessoes/ |
 | bloqueios | protect-files, protect-push, protect-merge, stop-verify (e outros), `cobertura` | .claude/pesquisa/eventos.jsonl |
 
 **Valor vazio não é zero.** Quando a fonte não existe, o `valor` fica vazio e a `nota` explica o porquê
@@ -56,7 +65,7 @@ UTC-3, o dia 28 vai até 2026-10-29T02:59:59Z: um commit das 21:30 locais do dia
 comparados pela data escrita neles, que também é a local. O fuso vem da variável `TZ` ou da máquina.
 
 ## COMO CONFERIR QUE DEU CERTO
-1. A saída termina com `✔ gravado: docs/pesquisa/dados/fase-1.csv` e o código de saída é 0.
+1. A saída termina com `✔ gravado: docs/estudo-de-caso/dados/fase-1.csv` e o código de saída é 0.
 2. Os commits batem com o Git (troque as datas; o `git` lê a data no seu fuso local):
    ```bash
    git log --since="2026-10-25 00:00:00" --until="2026-10-28 23:59:59" --oneline | wc -l
@@ -77,11 +86,11 @@ comparados pela data escrita neles, que também é a local. O fuso vem da variá
 - **`ci` com a nota de limite de 1000 execuções:** a fase tem mais execuções do que o `gh` devolve; divida o intervalo.
 - **Número diferente do esperado:** confira o fuso (variável `TZ`, acima) e a branch em que você está.
 - **CSV errado ou desatualizado:** não edite à mão. Corrija a fonte (ERR, sessão) e rode de novo: o arquivo é sobrescrito.
-- **Privacidade:** o csv só tem contagens e nomes de hook, categoria e tipo; pode ir para o Git (docs/pesquisa/dados/).
+- **Privacidade:** o csv só tem contagens e nomes de hook, categoria e tipo; pode ir para o Git (docs/estudo-de-caso/dados/).
   Os eventos brutos (`.claude/pesquisa/eventos.jsonl`) NUNCA vão.
 
 ## VER TAMBÉM
-- docs/pesquisa/protocolo.md (métricas) e docs/plans/006-coleta-de-dados-por-fase.md
+- docs/estudo-de-caso/protocolo.md (métricas) e docs/plans/006-coleta-de-dados-por-fase.md
 - docs/help/ferramentas/eventos-do-harness.md (de onde vêm os bloqueios)
 - docs/help/ferramentas/telemetria.md (tokens e tempo, que este csv não cobre)
 - skill `/handoff` (gera os registros de sessão lidos aqui)

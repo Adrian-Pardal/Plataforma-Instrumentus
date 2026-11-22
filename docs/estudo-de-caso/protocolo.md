@@ -69,8 +69,8 @@ resultado (correção ganha de aprovação; desbloqueio ganha de operação manu
 ## 5. Coleta
 - **Início da coleta sistemática:** 2026-11-22.
 - **Dados anteriores ao início:** o período de 2026-10-25 (ADR 0001) a 2026-11-21 é retrospectivo: reconstruído só do que o Git e docs/ já registram e das transcrições que ainda existirem, e marcado como "retrospectivo". Intervenções (M1) desse período não são reconstruídas.
-- **Por sessão:** um arquivo em docs/pesquisa/sessoes/ (data, tipo de cada intervenção, tempo, tokens).
-- **Dados brutos e derivados:** docs/pesquisa/dados/. O csv de cada fase sai de `scripts/pesquisa/coletar-fase.sh`
+- **Por sessão:** um arquivo em docs/estudo-de-caso/sessoes/ (data, tipo de cada intervenção, tempo, tokens).
+- **Dados brutos e derivados:** docs/estudo-de-caso/dados/. O csv de cada fase sai de `scripts/pesquisa/coletar-fase.sh`
   (docs/help/ferramentas/coleta-por-fase.md).
 - **Privacidade:** não registrar segredos, e-mails, nomes de pessoas nem dados de respondentes.
 

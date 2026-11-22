@@ -1,7 +1,16 @@
+---
+titulo: Plano 006 — coleta de dados por fase
+proposito: Registrar como e em que ordem o script de coleta por fase foi construído
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /planejar
+relacionados: [../adr/0007-registro-de-dados-para-pesquisa.md, ../estudo-de-caso/protocolo.md, ../help/ferramentas/coleta-por-fase.md]
+---
+
 # Plano: coleta de dados por fase da pesquisa
 
 - **Spec:** nenhuma. Fonte dos requisitos: o pedido do dono em 2026-11-22, o ADR 0007 e o protocolo
-  (docs/pesquisa/protocolo.md). Exceção autorizada pelo dono (a skill `planejar` exige spec Aprovada).
+  (docs/estudo-de-caso/protocolo.md). Exceção autorizada pelo dono (a skill `planejar` exige spec Aprovada).
 - **Status:** Concluído (aprovado pelo dono em 2026-11-22; 8 tasks feitas e verificadas pelo dono)
 - **Data:** 2026-11-22
 
@@ -10,7 +19,7 @@ Um script bash, `scripts/pesquisa/coletar-fase.sh`, que lê as fontes da pesquis
 Usa só `git`, `gh`, `jq` e `awk`; NENHUMA IA é chamada (o teste prova com um `claude` falso).
 
 Uso: `scripts/pesquisa/coletar-fase.sh "<nome da fase>" <AAAA-MM-DD início> <AAAA-MM-DD fim>`
-Saída: `docs/pesquisa/dados/<nome em minúsculas com hífen>.csv` ("Fase 1" gera `fase-1.csv`). Rodar de novo
+Saída: `docs/estudo-de-caso/dados/<nome em minúsculas com hífen>.csv` ("Fase 1" gera `fase-1.csv`). Rodar de novo
 sobrescreve (o csv é derivado).
 
 Formato (csv longo, uma linha por número): `fase,inicio,fim,metrica,detalhe,valor,nota`
@@ -20,7 +29,7 @@ Formato (csv longo, uma linha por número): `fase,inicio,fim,metrica,detalhe,val
 | commits | total | `git rev-list --count` do HEAD no intervalo |
 | ci | total, `<workflow>/<conclusão>` (sem conclusão: `em-andamento`) | `gh run list --created A..B` |
 | err | bug, erro-ia, ambiente, producao (e outras que existirem) | `data:` e `categoria:` de docs/erros/ERR-*.md |
-| intervencoes | os 6 tipos do protocolo, `indefinido` (`?`), total, sessoes-lidas | tabela "Intervenções humanas" de docs/pesquisa/sessoes/*.md do intervalo |
+| intervencoes | os 6 tipos do protocolo, `indefinido` (`?`), total, sessoes-lidas | tabela "Intervenções humanas" de docs/estudo-de-caso/sessoes/*.md do intervalo |
 | bloqueios | um por hook (protect-files, protect-push, protect-merge, stop-verify e outros) | .claude/pesquisa/eventos.jsonl |
 
 Decisões:
@@ -59,7 +68,7 @@ O csv acima. Nenhuma tabela nova.
 - Limite de 1000 execuções do `gh run list` → nota quando atingido.
 
 ## Critérios de aceite (CA)
-- CA-1: gera `docs/pesquisa/dados/<slug>.csv` com o cabeçalho e as 5 métricas acima, e rodar de novo dá o mesmo arquivo.
+- CA-1: gera `docs/estudo-de-caso/dados/<slug>.csv` com o cabeçalho e as 5 métricas acima, e rodar de novo dá o mesmo arquivo.
 - CA-2: os números batem com as fontes (intervalo fechado nas duas bordas, fora do intervalo não conta).
 - CA-3: fonte ausente gera valor vazio e nota, nunca 0.
 - CA-4: argumento inválido dá exit 2 com a mensagem de uso e não grava nada.

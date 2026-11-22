@@ -1,10 +1,19 @@
+---
+titulo: Eventos do harness (estudo de caso)
+proposito: Ler o registro dos bloqueios dos hooks e do início das sessões
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../../estudo-de-caso/protocolo.md, ../../adr/0007-registro-de-dados-para-pesquisa.md, ../../plans/005-registro-de-eventos-do-harness.md, telemetria.md]
+---
+
 # Eventos do harness (pesquisa)
 `tail -n 20 .claude/pesquisa/eventos.jsonl` — lê o registro que os hooks gravam quando bloqueiam algo e quando uma sessão começa.
 
 Última verificação: 2026-11-22 · Testado com: Claude Code 2.1.330 e `scripts/tests/eventos.test.sh`; comandos `jq` conferidos em arquivo de exemplo
 
 ## PARA QUE SERVE
-Alimenta o protocolo da pesquisa (docs/pesquisa/protocolo.md): M4 (qual peça do harness pegou cada erro)
+Alimenta o protocolo da pesquisa (docs/estudo-de-caso/protocolo.md): M4 (qual peça do harness pegou cada erro)
 e M11 (início de cada sessão, com a versão do Claude Code). Cada bloqueio dos hooks `protect-files`,
 `protect-push`, `protect-merge` e `stop-verify` vira UMA linha; cada início de sessão também. Sem isso, "qual
 peça pegou" dependeria de memória. Decisão: ADR 0007. Plano: docs/plans/005.
@@ -89,7 +98,7 @@ Sem `jq` instalado, os hooks continuam bloqueando, mas não conseguem gravar o e
 - **Apagar os dados:** `rm .claude/pesquisa/eventos.jsonl`. Cuidado: são dados da pesquisa e não voltam.
 
 ## VER TAMBÉM
-- docs/pesquisa/protocolo.md (métricas M4 e M11)
+- docs/estudo-de-caso/protocolo.md (métricas M4 e M11)
 - docs/adr/0007-registro-de-dados-para-pesquisa.md e docs/plans/005-registro-de-eventos-do-harness.md
 - docs/help/ferramentas/telemetria.md (outra fonte da pesquisa: tokens e tempo)
 - docs/help/ferramentas/testes-dos-hooks.md (como rodar os testes dos hooks)

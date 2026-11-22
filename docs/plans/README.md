@@ -1,4 +1,16 @@
+---
+titulo: Planos
+proposito: Indexar os planos de implementação (como e em que ordem construir cada feature)
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /planejar
+relacionados: [../templates/plan.md, ../specs/README.md]
+---
+
 # Planos
+
+**Esta pasta responde:** como e em que ordem esta feature será construída?
+**Mantida por:** `/planejar`
 
 Um arquivo por plano, `NNN-<feature>.md`, a partir de `docs/templates/plan.md`. O plano diz COMO e em que
 ORDEM construir o que a spec (ou o ADR, quando não há spec) pede. Só se implementa com o plano **Aprovado**.

@@ -1,4 +1,16 @@
+---
+titulo: Registro de erros
+proposito: Indexar os erros relevantes já ocorridos, com causa raiz e prevenção
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /registrar-erro
+relacionados: [../templates/erro.md, ../README.md]
+---
+
 # Registro de erros
+
+**Esta pasta responde:** esse erro já aconteceu? Qual foi a causa e como se previne?
+**Mantida por:** `/registrar-erro`
 
 Cada erro relevante vira um arquivo `ERR-NNN-titulo-curto.md` nesta pasta,
 a partir de `docs/templates/erro.md`. O registro é feito pela skill

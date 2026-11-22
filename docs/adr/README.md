@@ -1,4 +1,16 @@
+---
+titulo: Decisões de arquitetura (ADR)
+proposito: Indexar as decisões de arquitetura e o porquê de cada uma
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /registrar-adr
+relacionados: [../templates/adr.md, ../README.md]
+---
+
 # Decisões de arquitetura (ADR)
+
+**Esta pasta responde:** por que cada decisão de arquitetura foi tomada?
+**Mantida por:** `/registrar-adr`
 
 Um arquivo por decisão: `NNNN-titulo-curto.md`, a partir de `docs/templates/adr.md`.
 ADR aceito não se edita: se a decisão mudar, crie um novo ADR e marque o antigo

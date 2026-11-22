@@ -1,3 +1,12 @@
+---
+titulo: Handoff — AAAA-MM-DD
+proposito: Passar o contexto desta sessão para a próxima
+status: vigente
+atualizado: AAAA-MM-DD
+mantido-por: /handoff
+relacionados: [../plans/NNN-<feature>.md]
+---
+
 # Handoff — AAAA-MM-DD
 
 ## Onde estamos

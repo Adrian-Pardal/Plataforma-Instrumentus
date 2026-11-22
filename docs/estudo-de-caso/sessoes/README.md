@@ -1,3 +1,12 @@
+---
+titulo: Registro de sessões
+proposito: Guardar um registro por sessão de trabalho para o estudo de caso
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /handoff
+relacionados: [../protocolo.md, ../../../.claude/skills/handoff/SKILL.md]
+---
+
 # Registro de sessões
 
 Um arquivo por sessão de trabalho: `AAAA-MM-DD.md` (se o dia já tem um, `AAAA-MM-DD-2.md`). Gerado pela skill `/handoff`.
