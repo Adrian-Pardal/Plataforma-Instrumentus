@@ -1,3 +1,12 @@
+---
+titulo: Plano 005 — registro de eventos do harness
+proposito: Registrar como e em que ordem os hooks passaram a gravar eventos para o estudo de caso
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /planejar
+relacionados: [../adr/0007-registro-de-dados-para-pesquisa.md, ../estudo-de-caso/protocolo.md, ../help/ferramentas/eventos-do-harness.md]
+---
+
 # Plano: registro de eventos do harness para a pesquisa
 
 - **Spec:** nenhuma. Fonte dos requisitos: ADR 0007 e o pedido do dono em 2026-11-22. Exceção autorizada pelo

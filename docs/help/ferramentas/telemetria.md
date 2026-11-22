@@ -1,3 +1,12 @@
+---
+titulo: Telemetria da pesquisa (Collector local)
+proposito: Subir o Collector OpenTelemetry local e conferir os arquivos de tokens e tempo
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../../estudo-de-caso/protocolo.md, ../../adr/0007-registro-de-dados-para-pesquisa.md, eventos-do-harness.md]
+---
+
 # Telemetria da pesquisa
 `docker compose up -d` — sobe um Collector OpenTelemetry local que grava as métricas e os logs do Claude Code em arquivos JSON.
 

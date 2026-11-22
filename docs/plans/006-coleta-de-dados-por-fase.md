@@ -1,3 +1,12 @@
+---
+titulo: Plano 006 — coleta de dados por fase
+proposito: Registrar como e em que ordem o script de coleta por fase foi construído
+status: vigente
+atualizado: 2026-11-22
+mantido-por: /planejar
+relacionados: [../adr/0007-registro-de-dados-para-pesquisa.md, ../estudo-de-caso/protocolo.md, ../help/ferramentas/coleta-por-fase.md]
+---
+
 # Plano: coleta de dados por fase da pesquisa
 
 - **Spec:** nenhuma. Fonte dos requisitos: o pedido do dono em 2026-11-22, o ADR 0007 e o protocolo

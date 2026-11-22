@@ -54,7 +54,8 @@ nada de trechos de conversa, segredos, conteúdo de arquivo ou valores de variá
 12. Tabela de intervenções humanas: uma linha por intervenção do dono NESTA conversa, com o tipo de
     docs/estudo-de-caso/protocolo.md §3 (decisão, aprovação, correção, operação manual, desbloqueio, aprendizado;
     empate: vale a que mudou o resultado). Na dúvida, marque `?`. Você só vê a conversa atual: avise se ela foi compactada.
-13. Seções do arquivo: Feito · Intervenções humanas (`# | o que o dono fez | tipo`) · Bloqueios do harness ·
+13. Comece o arquivo com o cabeçalho de `docs/templates/cabecalho.md` (titulo "Sessão AAAA-MM-DD", mantido-por
+    /handoff). Depois, as seções: Feito · Intervenções humanas (`# | o que o dono fez | tipo`) · Bloqueios do harness ·
     Erros da IA · Testes · Minha percepção (só o título e `_a preencher_`). MOSTRE o arquivo inteiro, com a
     tabela em destaque: o dono confirma ou corrige antes de salvar. Salve só após o ok.
 

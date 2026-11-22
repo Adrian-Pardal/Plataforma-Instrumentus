@@ -1,3 +1,12 @@
+---
+titulo: Coleta de dados por fase
+proposito: Gerar o csv com os números de uma fase do estudo de caso, sem chamar nenhuma IA
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../../estudo-de-caso/protocolo.md, ../../plans/006-coleta-de-dados-por-fase.md, eventos-do-harness.md]
+---
+
 # Coleta de dados por fase
 `scripts/pesquisa/coletar-fase.sh "Fase 1" 2026-10-25 2026-10-28` — gera o csv com os números de uma fase da pesquisa, sem chamar nenhuma IA.
 

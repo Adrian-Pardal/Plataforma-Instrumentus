@@ -1,3 +1,12 @@
+---
+titulo: Eventos do harness (estudo de caso)
+proposito: Ler o registro dos bloqueios dos hooks e do início das sessões
+status: vigente
+atualizado: 2026-11-22
+mantido-por: manual
+relacionados: [../../estudo-de-caso/protocolo.md, ../../adr/0007-registro-de-dados-para-pesquisa.md, ../../plans/005-registro-de-eventos-do-harness.md, telemetria.md]
+---
+
 # Eventos do harness (pesquisa)
 `tail -n 20 .claude/pesquisa/eventos.jsonl` — lê o registro que os hooks gravam quando bloqueiam algo e quando uma sessão começa.
 
