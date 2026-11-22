@@ -20,4 +20,4 @@ relacionados: [../README.md, ../help/ferramentas/testes-dos-hooks.md]
 Os testes dos scripts e hooks (bash) já existem em `scripts/tests/` e estão explicados em
 [help/ferramentas/testes-dos-hooks.md](../help/ferramentas/testes-dos-hooks.md).
 
-**Mantida por:** `/estrategia-testes` e `/casos-de-teste` (a criar).
+**Mantida por:** [`/estrategia-testes`](../../.claude/skills/estrategia-testes/SKILL.md) e [`/casos-de-teste`](../../.claude/skills/casos-de-teste/SKILL.md).
