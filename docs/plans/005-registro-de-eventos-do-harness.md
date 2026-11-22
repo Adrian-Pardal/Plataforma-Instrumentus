@@ -15,7 +15,7 @@ e ao M11 do protocolo.
 
 Formato (uma linha por evento, chaves em português):
 - bloqueio: `{"quando":"2026-11-22T14:30:00Z","tipo":"bloqueio","hook":"protect-files","motivo":"adr-aceito","alvo":"docs/adr/0003-x.md"}`
-- sessão: `{"quando":"...","tipo":"sessao","hook":"session-start","versao":"2.1.x (Claude Code)","branch":"docs/pesquisa"}`
+- sessão: `{"quando":"...","tipo":"sessao","hook":"session-start","versao":"2.1.x (Claude Code)","branch":"docs/estudo-de-caso"}`
 
 Decisões:
 - **Motivo é um código fixo** (ex.: `adr-aceito`, `push-forcado`, `testes-falharam`), não o texto da mensagem:
@@ -30,7 +30,7 @@ Decisões:
 - **Linhas curtas** (< 4 KB): o acréscimo (`>>`) de linha curta é seguro mesmo com hooks rodando em paralelo.
 - **SessionStart:** não imprime nada (stdout vira contexto do Claude), roda rápido (`timeout` de 5 s no
   `claude --version`), e se faltar `claude` ou `git` grava "desconhecida".
-- **Branch:** o dono manteve tudo na `docs/pesquisa`.
+- **Branch:** o dono manteve tudo na `docs/estudo-de-caso`.
 
 ## Modelo de dados
 Arquivo `.claude/pesquisa/eventos.jsonl` (no .gitignore; dados privados, ver ADR 0007). Esquema acima.
@@ -51,7 +51,7 @@ Arquivo `.claude/pesquisa/eventos.jsonl` (no .gitignore; dados privados, ver ADR
   código de saída e o mesmo stderr de antes.
 - Hook lento atrasa a sessão → SessionStart com `timeout`; teste de duração com `claude` ausente.
 - Concorrência (hooks em paralelo) → linha única e curta com `>>`.
-- Arquivo ignorado pelo Git é perdido ao trocar de máquina → copiar derivados para docs/pesquisa/dados/.
+- Arquivo ignorado pelo Git é perdido ao trocar de máquina → copiar derivados para docs/estudo-de-caso/dados/.
 
 ## Critérios de aceite (CA)
 - CA-1: cada bloqueio dos 4 hooks acrescenta UMA linha JSON válida com quando (UTC), hook, motivo, alvo.

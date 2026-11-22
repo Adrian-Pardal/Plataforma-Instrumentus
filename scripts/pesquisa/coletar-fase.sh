@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# coletar-fase.sh — coleta os números de uma fase da pesquisa e grava docs/pesquisa/dados/<fase>.csv.
+# coletar-fase.sh — coleta os números de uma fase da pesquisa e grava docs/estudo-de-caso/dados/<fase>.csv.
 # Uso: scripts/pesquisa/coletar-fase.sh "<nome da fase>" <AAAA-MM-DD início> <AAAA-MM-DD fim>
-# Plano 006, ADR 0007, protocolo em docs/pesquisa/protocolo.md. Usa só git, gh, jq e awk: NENHUMA IA é chamada.
+# Plano 006, ADR 0007, protocolo em docs/estudo-de-caso/protocolo.md. Usa só git, gh, jq e awk: NENHUMA IA é chamada.
 # Regras:
 #   - intervalo FECHADO nas duas pontas e igual ao DIA LOCAL do fuso da máquina (de 00:00:00 do início a 23:59:59 do
 #     fim); as pontas viram instantes UTC uma vez só, e commits, CI e bloqueios usam esses mesmos instantes.
@@ -121,7 +121,7 @@ coletar_err() {
   [[ $sem -eq 0 ]] || linha err sem-data-ou-categoria "$sem" "ERR com frontmatter incompleto, fora das contagens"
 }
 
-# --- Intervenções humanas (docs/pesquisa/sessoes/AAAA-MM-DD*.md) ------------------------------------------------
+# --- Intervenções humanas (docs/estudo-de-caso/sessoes/AAAA-MM-DD*.md) ------------------------------------------------
 # Soma, por tipo, as linhas da tabela "Intervenções humanas" (3ª coluna) dos registros de sessão cuja data (o início
 # do nome do arquivo) cai no intervalo. Os 6 tipos são os do protocolo (§3); "?" e qualquer tipo que não se
 # reconhece contam como "indefinido". Só a tabela dessa seção conta (a próxima seção, com outras tabelas, não).
@@ -171,7 +171,7 @@ emitir_intervencoes() {
 }
 
 coletar_intervencoes() {
-  local pasta="$RAIZ/docs/pesquisa/sessoes" arq tipos tipo t
+  local pasta="$RAIZ/docs/estudo-de-caso/sessoes" arq tipos tipo t
   local lidas=0 sem_tabela=0 total=0
   local -A conta=([decisao]=0 [aprovacao]=0 [correcao]=0 [operacao-manual]=0 [desbloqueio]=0 [aprendizado]=0 [indefinido]=0)
   for arq in "$pasta"/*.md; do
@@ -227,7 +227,7 @@ coletar_err
 coletar_intervencoes
 coletar_bloqueios
 
-DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
+DESTINO="$RAIZ/docs/estudo-de-caso/dados/$SLUG.csv"
 mkdir -p "${DESTINO%/*}" 2>/dev/null || erro "não consegui criar a pasta ${DESTINO%/*}"
 # Grava num .tmp e só então troca pelo nome final: se algo falhar, o csv antigo (se havia) fica como estava e o
 # .tmp é apagado. O "✔ gravado" abaixo só aparece depois que as duas etapas deram certo.

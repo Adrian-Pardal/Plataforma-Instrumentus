@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Cria o handoff da sessão em docs/handoff/AAAA-MM-DD-<assunto>.md pelo template, com onde estamos, feito, em andamento, próximo passo concreto, ADRs criados, problemas e o resultado de scripts/verify.sh test rodado na hora, além da branch e dos commits sem push. Use ao encerrar uma sessão de trabalho. Não use para planejar, implementar ou registrar erro, e nunca para afirmar que está tudo funcionando sem a saída do verify. No fim, também gera o registro da sessão para a pesquisa em docs/pesquisa/sessoes/AAAA-MM-DD.md (feito, intervenções humanas, bloqueios do harness, erros da IA, testes).
+description: Cria o handoff da sessão em docs/handoff/AAAA-MM-DD-<assunto>.md pelo template, com onde estamos, feito, em andamento, próximo passo concreto, ADRs criados, problemas e o resultado de scripts/verify.sh test rodado na hora, além da branch e dos commits sem push. Use ao encerrar uma sessão de trabalho. Não use para planejar, implementar ou registrar erro, e nunca para afirmar que está tudo funcionando sem a saída do verify. No fim, também gera o registro da sessão para a pesquisa em docs/estudo-de-caso/sessoes/AAAA-MM-DD.md (feito, intervenções humanas, bloqueios do harness, erros da IA, testes).
 disable-model-invocation: true
 ---
 
@@ -41,7 +41,7 @@ afirma o que foi comprovado agora.
    commitar o handoff e o registro. Não faça push sem pedido.
 
 ## Registro da pesquisa (ADR 0007)
-Gere docs/pesquisa/sessoes/AAAA-MM-DD.md (se o dia já tem um, use -2, -3). Só contagens e uma linha por item:
+Gere docs/estudo-de-caso/sessoes/AAAA-MM-DD.md (se o dia já tem um, use -2, -3). Só contagens e uma linha por item:
 nada de trechos de conversa, segredos, conteúdo de arquivo ou valores de variáveis.
 10. INÍCIO da sessão: a primeira linha `"tipo":"sessao"` de hoje em .claude/pesquisa/eventos.jsonl
     (`jq -r 'select(.tipo=="sessao") | .quando' .claude/pesquisa/eventos.jsonl | grep "^$(date -u +%F)" | head -1`).
@@ -52,7 +52,7 @@ nada de trechos de conversa, segredos, conteúdo de arquivo ou valores de variá
     - Erros: ERR-NNN tocados (`git log --since=<início> --name-only --format= -- docs/erros`), com a categoria; destaque `erro-ia`.
     - Testes: o resultado do passo 4 (não rode de novo).
 12. Tabela de intervenções humanas: uma linha por intervenção do dono NESTA conversa, com o tipo de
-    docs/pesquisa/protocolo.md §3 (decisão, aprovação, correção, operação manual, desbloqueio, aprendizado;
+    docs/estudo-de-caso/protocolo.md §3 (decisão, aprovação, correção, operação manual, desbloqueio, aprendizado;
     empate: vale a que mudou o resultado). Na dúvida, marque `?`. Você só vê a conversa atual: avise se ela foi compactada.
 13. Seções do arquivo: Feito · Intervenções humanas (`# | o que o dono fez | tipo`) · Bloqueios do harness ·
     Erros da IA · Testes · Minha percepção (só o título e `_a preencher_`). MOSTRE o arquivo inteiro, com a
