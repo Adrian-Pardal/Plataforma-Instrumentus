@@ -30,6 +30,8 @@ caso "cada tipo da lista (refactor)"          0 "refactor: simplifica"
 caso "cada tipo da lista (ci)"                0 "ci: fixa o runner"
 caso "cada tipo da lista (build)"             0 "build: ajusta o pom"
 caso "cada tipo da lista (perf)"              0 "perf: acelera o divisor"
+# As aspas simples são de propósito: o título deve chegar ao script com o $(...) literal, sem expandir.
+# shellcheck disable=SC2016
 caso "descrição com \$ e aspas é só texto"    0 'fix: não executa $(date) nem "aspas"'
 
 echo "▶ validar-titulo-pr: títulos fora do padrão (1)"
