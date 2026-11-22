@@ -61,7 +61,31 @@
   },
   "permissions": {
     "ask": [
-      "Bash(gh pr merge *)"
+      "Bash(gh pr merge *)",
+      "Bash(curl)",
+      "Bash(curl *)",
+      "Bash(wget)",
+      "Bash(wget *)",
+      "Bash(nc)",
+      "Bash(nc *)",
+      "Bash(ncat)",
+      "Bash(ncat *)",
+      "Bash(netcat)",
+      "Bash(netcat *)",
+      "Bash(telnet)",
+      "Bash(telnet *)",
+      "Bash(ssh)",
+      "Bash(ssh *)",
+      "Bash(scp)",
+      "Bash(scp *)",
+      "Bash(sftp)",
+      "Bash(sftp *)",
+      "Bash(rsync)",
+      "Bash(rsync *)",
+      "Bash(npm publish)",
+      "Bash(npm publish *)",
+      "Bash(gh gist)",
+      "Bash(gh gist *)"
     ],
     "allow": [
       "Bash(scripts/verify.sh *)",
