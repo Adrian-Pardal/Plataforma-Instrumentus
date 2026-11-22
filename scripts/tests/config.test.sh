@@ -92,22 +92,24 @@ done < "$RAIZ/docs/skills.md"
 # padrão com argumento ("curl *").
 ENVIO=(curl wget nc ncat netcat telnet ssh scp sftp rsync "npm publish" "gh gist")
 allow_libera_envio() {   # allow_libera_envio <settings.json>
-  local regra padrao cmd
+  local regras regra padrao cmd
+  regras="$(jq -r '(.permissions.allow // [])[]' "$1")" || return 2   # jq quebrado = falha, não "vazio"
   while IFS= read -r regra; do
     if   [[ "$regra" == "Bash" ]];      then padrao='*'
     elif [[ "$regra" == "Bash("*")" ]]; then padrao="${regra#Bash(}"; padrao="${padrao%)}"
     else continue; fi
+    padrao="${padrao/:\*/ *}"   # sintaxe antiga de prefixo: "curl:*" vira "curl *"
     for cmd in "${ENVIO[@]}"; do
       # shellcheck disable=SC2053  # glob de propósito: o padrão fica sem aspas
       if [[ "$cmd" == $padrao || "$cmd x" == $padrao ]]; then echo "$cmd"; fi
     done
-  done < <(jq -r '.permissions.allow[]' "$1")
+  done <<<"$regras"
 }
 
 echo "▶ config: proteção do agente (plano 004)"
 # Comandos que enviam dados para fora pedem confirmação (permissions.ask do settings.json). Cada um nas duas
 # formas, "Bash(x)" e "Bash(x *)": não está confirmado que "x *" casa "x" sem argumentos.
-for cmd in curl wget nc ncat netcat telnet ssh scp sftp rsync "npm publish" "gh gist"; do
+for cmd in "${ENVIO[@]}"; do
   for regra in "Bash($cmd)" "Bash($cmd *)"; do
     jq -e --arg r "$regra" '.permissions.ask | index($r) != null' "$RAIZ/.claude/settings.json" >/dev/null 2>&1
     confere "settings.json pede confirmação para $regra" "$?"
@@ -134,7 +136,8 @@ jq -n '{permissions: {allow: ["Bash(curl:*)"]}}' > "$TMP/prefixo.json"
 
 # jq quebrado ou sem allow: JSON inválido tem de falhar; sem allow é seguro (vazio, rc 0)
 printf '{ isto não é json' > "$TMP/invalido.json"
-allow_libera_envio "$TMP/invalido.json" >/dev/null 2>&1; [[ $? -ne 0 ]]
+allow_libera_envio "$TMP/invalido.json" >/dev/null 2>&1 && rc=0 || rc=$?
+[[ $rc -ne 0 ]]
 confere "JSON inválido faz allow_libera_envio falhar (não passa em silêncio)" "$?"
 printf '{"permissions":{}}' > "$TMP/sem-allow.json"
 saida="$(allow_libera_envio "$TMP/sem-allow.json")"; rc=$?
