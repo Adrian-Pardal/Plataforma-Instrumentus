@@ -1,3 +1,12 @@
+---
+titulo: Spec — <nome da feature>
+proposito: <uma frase: que dúvida esta spec responde>
+status: rascunho
+atualizado: AAAA-MM-DD
+mantido-por: /entrevista-spec
+relacionados: [../plans/NNN-<feature>.md]
+---
+
 # Spec: <nome da feature>
 
 - **Status:** Rascunho | Aprovada | Implementada

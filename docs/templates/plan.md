@@ -1,3 +1,12 @@
+---
+titulo: Plano — <nome da feature>
+proposito: <uma frase: como e em que ordem esta feature será construída>
+status: rascunho
+atualizado: AAAA-MM-DD
+mantido-por: /planejar
+relacionados: [../specs/<feature>.md]
+---
+
 # Plano: <nome da feature>
 
 - **Spec:** [link para docs/specs/...](../specs/...)

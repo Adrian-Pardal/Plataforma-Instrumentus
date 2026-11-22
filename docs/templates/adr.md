@@ -1,3 +1,12 @@
+---
+titulo: ADR NNNN — <decisão em uma frase>
+proposito: <uma frase: por que esta decisão foi tomada>
+status: vigente
+atualizado: AAAA-MM-DD
+mantido-por: /registrar-adr
+relacionados: [ADR-NNNN]
+---
+
 # ADR NNNN: <decisão em uma frase>
 
 - **Status:** Proposto | Aceito | Substituído por NNNN

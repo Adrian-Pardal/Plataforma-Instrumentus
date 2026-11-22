@@ -9,6 +9,11 @@ data: AAAA-MM-DD
 issue: link ou nenhuma
 pr: link ou nenhum
 recorrencias: 1
+proposito: <uma frase: o que este erro ensina>
+status-doc: vigente
+atualizado: AAAA-MM-DD
+mantido-por: /registrar-erro
+relacionados: [ADR-NNNN]
 ---
 
 # ERR-NNN: <título curto do erro>
