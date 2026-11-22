@@ -67,7 +67,7 @@ Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchroniz
   `main`, com os comandos mostrados antes de rodar, e atualizar `protecao-de-branches.md` e
   `titulo-do-pr.md` no mesmo commit · Cobre: pedido 2 · Teste: `gh api` mostra o check exigido; um PR
   com título errado fica bloqueado (30 min)
-- [ ] T6 [docs] — ADR 0006 "Estratégia de merge: merge commit em tudo e tag por versão" pela `/registrar-adr`
+- [x] T6 [docs] — ADR 0006 "Estratégia de merge: merge commit em tudo e tag por versão" pela `/registrar-adr`
   (squash e rebase descartados, com o motivo; Proposto até o "sim" do dono) · Cobre: pedido 3 · Teste:
   leitura (30 min)
 - [ ] T7 [docs] — frase no CLAUDE.md (§6), enxugando o que for preciso para não passar do limite · Cobre:
