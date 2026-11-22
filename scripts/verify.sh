@@ -78,7 +78,8 @@ rodar_shellcheck() {
   local -a arquivos=()
   local f
   # lib/*.sh não tem shebang: sem "# shellcheck shell=bash" no topo, o próprio shellcheck reprova (SC2148).
-  for f in "$RAIZ"/.claude/hooks/*.sh "$RAIZ"/.claude/hooks/lib/*.sh "$RAIZ"/scripts/*.sh "$RAIZ"/scripts/tests/*.sh; do
+  # scripts/*/*.sh cobre scripts/tests/ e as demais subpastas (scripts/pesquisa/...): subpasta nova entra sozinha.
+  for f in "$RAIZ"/.claude/hooks/*.sh "$RAIZ"/.claude/hooks/lib/*.sh "$RAIZ"/scripts/*.sh "$RAIZ"/scripts/*/*.sh; do
     [[ -f "$f" ]] && arquivos+=("$f")
   done
   [[ ${#arquivos[@]} -gt 0 ]] || return 0

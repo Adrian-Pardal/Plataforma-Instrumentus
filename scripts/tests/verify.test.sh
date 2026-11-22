@@ -109,6 +109,31 @@ else
 fi
 rm -rf "$TMP2/.claude"   # os casos do actionlint abaixo reaproveitam esta pasta
 
+# Plano 006, T6: o shellcheck do modo full também olha as subpastas de scripts/ (scripts/pesquisa/ e scripts/tests/).
+caso_subpasta() {   # caso_subpasta <esperado> <modo> <descrição> <conteúdo de scripts/pesquisa/c.sh>
+  local esperado="$1" modo="$2" descricao="$3" script="$4" obtido
+  rm -rf "$TMP2/scripts" "$TMP2/.claude"; mkdir -p "$TMP2/scripts/tests" "$TMP2/scripts/pesquisa"
+  printf '%s\n' "$script" > "$TMP2/scripts/pesquisa/c.sh"
+  VERIFY_RAIZ="$TMP2" "$VERIFY" "$modo" >/dev/null 2>&1
+  obtido=$?
+  if [[ "$obtido" == "$esperado" ]]; then
+    echo "  ok    ($esperado) $descricao"
+  else
+    echo "  FALHA (esperado $esperado, veio $obtido) $descricao" >&2
+    falhas=$((falhas + 1))
+  fi
+}
+
+echo "▶ verify.sh: o shellcheck também olha scripts/pesquisa/*.sh"
+if command -v shellcheck >/dev/null; then
+  caso_subpasta 0 full "full: script limpo em scripts/pesquisa passa"   "$SCRIPT_OK"
+  caso_subpasta 1 full "full: script com erro em scripts/pesquisa reprova" "$SCRIPT_RUIM"
+  caso_subpasta 0 test "test: não roda shellcheck em scripts/pesquisa"  "$SCRIPT_RUIM"
+else
+  echo "  • shellcheck não instalado: casos de scripts/pesquisa pulados"
+fi
+rm -rf "$TMP2/scripts"
+
 # actionlint: usa um "actionlint" falso no PATH e um projeto com (ou sem) .github/workflows.
 caso_actionlint() {   # caso_actionlint <esperado> <modo> <descrição> <saída do actionlint falso> <com workflows: sim|nao>
   local esperado="$1" modo="$2" descricao="$3" saida="$4" com_wf="$5" obtido FALSO3
