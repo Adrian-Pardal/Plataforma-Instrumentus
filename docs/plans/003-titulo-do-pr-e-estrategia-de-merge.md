@@ -70,7 +70,7 @@ Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchroniz
 - [x] T6 [docs] — ADR 0006 "Estratégia de merge: merge commit em tudo e tag por versão" pela `/registrar-adr`
   (squash e rebase descartados, com o motivo; Proposto até o "sim" do dono) · Cobre: pedido 3 · Teste:
   leitura (30 min)
-- [ ] T7 [docs] — frase no CLAUDE.md (§6), enxugando o que for preciso para não passar do limite · Cobre:
+- [x] T7 [docs] — frase no CLAUDE.md (§6), enxugando o que for preciso para não passar do limite · Cobre:
   pedido 4 · Teste: leitura (15 min)
 
 ## Rastreabilidade
