@@ -75,6 +75,19 @@ cria_err() {
   printf -- '---\nid: %s\ntitulo: erro de exemplo\nstatus: corrigido\ncategoria: %s\ndata: %s\n---\n\n# %s\n' "$1" "$3" "$2" "$1" > "$P/docs/erros/$1-exemplo.md"
 }
 
+# cria_sessao <arquivo> <tipo>...: registro de sessão de exemplo, no formato que a skill /handoff gera, com uma linha
+# na tabela "Intervenções humanas" para cada tipo dado. Põe também uma tabela na seção "Bloqueios do harness", que
+# NÃO pode ser contada como intervenção.
+cria_sessao() {
+  local arq="$P/docs/pesquisa/sessoes/$1" i=0 t; shift
+  mkdir -p "${arq%/*}"
+  {
+    printf '# Sessão\n\n## Feito\n- a\n\n## Intervenções humanas\n| # | O que o dono fez | Tipo |\n|---|---|---|\n'
+    for t in "$@"; do i=$((i + 1)); printf '| %s | fez algo | %s |\n' "$i" "$t"; done
+    printf '\n## Bloqueios do harness\n| hook | motivo | Decisão |\n|---|---|---|\n| protect-files | x | Decisão |\n\n## Minha percepção\n_a preencher_\n'
+  } > "$arq"
+}
+
 # coleta <args...>: roda o script no projeto P, com o gh de FAKE_GH (ok ou falha) e o claude falso; guarda RC e ERR.
 coleta() {
   local caminho="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH"
@@ -169,6 +182,47 @@ projeto err-sem-pasta
 coleta "Fase 1" 2026-10-25 2026-10-28
 confere "" "$(celula fase-1 err total valor)" "sem docs/erros: valor vazio, nunca 0"
 confere "pasta docs/erros ausente" "$(celula fase-1 err total nota)" "sem docs/erros: a nota diz por quê"
+
+echo "▶ coletar-fase: intervenções humanas dos registros de sessão"
+projeto sessoes
+cria_sessao 2026-10-26.md "Decisão" "Aprovação" "Correção" "?"                                   # dentro
+cria_sessao 2026-10-27-2.md "decisão" "DECISÃO" "Operação manual" "Aprendizado" "Desbloqueio" "Foo"  # dentro (outro dia, sufixo -2)
+cria_sessao 2026-10-30.md "Decisão" "Decisão" "Decisão"                                          # fora (depois)
+cria_sessao 2026-10-24.md "Aprovação" "Aprovação"                                                # fora (antes)
+printf '# Sessão sem a tabela\n\n## Feito\n- a\n' > "$P/docs/pesquisa/sessoes/2026-10-28.md"      # dentro, mas sem a tabela
+printf '# Registro de sessões\n\n| a | b | Decisão |\n' > "$P/docs/pesquisa/sessoes/README.md"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 0 "$RC" "sessões: exit 0"
+confere 3 "$(celula fase-1 intervencoes decisao valor)" "sessões: decisao (minúscula, maiúscula e acento normalizados)"
+confere 1 "$(celula fase-1 intervencoes aprovacao valor)" "sessões: aprovacao (a de 24/10 fica fora)"
+confere 1 "$(celula fase-1 intervencoes correcao valor)" "sessões: correcao"
+confere 1 "$(celula fase-1 intervencoes operacao-manual valor)" "sessões: operacao-manual"
+confere 1 "$(celula fase-1 intervencoes desbloqueio valor)" "sessões: desbloqueio"
+confere 1 "$(celula fase-1 intervencoes aprendizado valor)" "sessões: aprendizado"
+confere 2 "$(celula fase-1 intervencoes indefinido valor)" "sessões: '?' e tipo desconhecido viram indefinido"
+confere 10 "$(celula fase-1 intervencoes total valor)" "sessões: total (a tabela de bloqueios, o README e as de fora não contam)"
+confere 2 "$(celula fase-1 intervencoes sessoes-lidas valor)" "sessões: 2 sessões lidas"
+confere 1 "$(celula fase-1 intervencoes sessoes-sem-tabela valor)" "sessões: a sessão sem tabela aparece, não some"
+projeto sessoes-tipo-em-branco
+cria_sessao 2026-10-26.md ""
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 1 "$(celula fase-1 intervencoes indefinido valor)" "sessões: linha com o tipo em branco conta como indefinido"
+confere 1 "$(celula fase-1 intervencoes total valor)" "sessões: linha com o tipo em branco entra no total"
+projeto sessoes-so-sem-tabela
+mkdir -p "$P/docs/pesquisa/sessoes"; printf '# Sessão\n\n## Feito\n- a\n' > "$P/docs/pesquisa/sessoes/2026-10-26.md"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere "" "$(celula fase-1 intervencoes total valor)" "só sessões sem tabela: total vazio, nunca 0"
+confere "nenhuma sessão do período tem a tabela Intervenções humanas" "$(celula fase-1 intervencoes total nota)" "só sessões sem tabela: a nota diz por quê"
+confere 1 "$(celula fase-1 intervencoes sessoes-sem-tabela valor)" "só sessões sem tabela: a linha de aviso existe"
+projeto sessoes-fora
+cria_sessao 2026-11-02.md "Decisão"
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere "" "$(celula fase-1 intervencoes total valor)" "sessão só fora do intervalo: valor vazio"
+confere "sem registros de sessão no período" "$(celula fase-1 intervencoes total nota)" "sessão só fora do intervalo: a nota diz por quê"
+projeto sem-sessoes
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere "" "$(celula fase-1 intervencoes total valor)" "sem a pasta de sessões: valor vazio, nunca 0"
+confere "sem registros de sessão no período" "$(celula fase-1 intervencoes total nota)" "sem a pasta de sessões: a nota diz por quê"
 
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de coletar-fase falharam" >&2

@@ -23,10 +23,14 @@ data_valida "$INICIO" || erro "data inicial inválida: use AAAA-MM-DD ('$INICIO'
 data_valida "$FIM" || erro "data final inválida: use AAAA-MM-DD ('$FIM')"
 [[ ! "$INICIO" > "$FIM" ]] || erro "a data inicial ($INICIO) vem depois da final ($FIM)"
 
+# Minúsculas e sem acento (lê o stdin). As alternâncias do sed funcionam byte a byte, em qualquer locale.
+minusculas_sem_acento() {
+  sed -E 's/á|à|â|ã|ä|Á|À|Â|Ã|Ä/a/g; s/é|è|ê|ë|É|È|Ê|Ë/e/g; s/í|ì|î|ï|Í|Ì|Î|Ï/i/g; s/ó|ò|ô|õ|ö|Ó|Ò|Ô|Õ|Ö/o/g; s/ú|ù|û|ü|Ú|Ù|Û|Ü/u/g; s/ç|Ç/c/g' \
+    | tr '[:upper:]' '[:lower:]'
+}
+
 # Nome do arquivo: minúsculas, sem acento, tudo que não é letra ou número vira "-" ("Fase 1" -> fase-1).
-SLUG=$(tr '[:upper:]' '[:lower:]' <<<"$NOME" \
-  | sed -E 's/á|à|â|ã|ä|Á|À|Â|Ã|Ä/a/g; s/é|è|ê|ë|É|È|Ê|Ë/e/g; s/í|ì|î|ï|Í|Ì|Î|Ï/i/g; s/ó|ò|ô|õ|ö|Ó|Ò|Ô|Õ|Ö/o/g; s/ú|ù|û|ü|Ú|Ù|Û|Ü/u/g; s/ç|Ç/c/g' \
-  | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+SLUG=$(minusculas_sem_acento <<<"$NOME" | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
 [[ -n "$SLUG" ]] || erro "o nome da fase precisa ter pelo menos uma letra ou um número"
 
 # --- Saída ------------------------------------------------------------------------------------------------------
@@ -107,9 +111,56 @@ coletar_err() {
   [[ $sem -eq 0 ]] || linha err sem-data-ou-categoria "$sem" "ERR com frontmatter incompleto, fora das contagens"
 }
 
+# --- Intervenções humanas (docs/pesquisa/sessoes/AAAA-MM-DD*.md) ------------------------------------------------
+# Soma, por tipo, as linhas da tabela "Intervenções humanas" (3ª coluna) dos registros de sessão cuja data (o início
+# do nome do arquivo) cai no intervalo. Os 6 tipos são os do protocolo (§3); "?" e qualquer tipo que não se
+# reconhece contam como "indefinido". Só a tabela dessa seção conta (a próxima seção, com outras tabelas, não).
+# Sessão sem a tabela aparece numa linha própria e fica fora das contagens: nada some em silêncio.
+TIPOS_INTERVENCAO=(decisao aprovacao correcao operacao-manual desbloqueio aprendizado)
+coletar_intervencoes() {
+  local pasta="$RAIZ/docs/pesquisa/sessoes" arq base data tipos tipo t
+  local lidas=0 sem_tabela=0 total=0
+  local -A conta=([decisao]=0 [aprovacao]=0 [correcao]=0 [operacao-manual]=0 [desbloqueio]=0 [aprendizado]=0 [indefinido]=0)
+  for arq in "$pasta"/*.md; do
+    [[ -f "$arq" ]] || continue
+    base="${arq##*/}"; data="${base:0:10}"
+    [[ "$data" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || continue         # README.md e outros nomes ficam de fora
+    [[ ! "$data" < "$INICIO" && ! "$data" > "$FIM" ]] || continue
+    tipos=$(awk '/^#+[[:space:]]+Intervenções humanas/ { dentro = 1; achou = 1; next }
+                 dentro && /^#/ { dentro = 0 }
+                 dentro && /^\|/ {
+                   split($0, c, "|"); tipo = c[4]; gsub(/^[ \t]+|[ \t]+$/, "", tipo)
+                   if (c[2] ~ /^[ \t]*#[ \t]*$/ || tipo ~ /^[-: ]+$/) next      # cabeçalho e separador da tabela
+                   print (tipo == "" ? "?" : tipo)                              # tipo em branco = indefinido
+                 }
+                 END { if (!achou) print "@@sem-secao@@" }' "$arq")
+    if [[ "$tipos" == "@@sem-secao@@" ]]; then sem_tabela=$((sem_tabela + 1)); continue; fi
+    lidas=$((lidas + 1))
+    while IFS= read -r tipo; do
+      [[ -n "$tipos" ]] || break                                          # tabela sem nenhuma linha
+      t=$(minusculas_sem_acento <<<"$tipo" | sed -E 's/[[:space:]]+/-/g')
+      [[ -v "conta[$t]" && "$t" != indefinido ]] || t=indefinido
+      conta[$t]=$(( ${conta[$t]} + 1 )); total=$((total + 1))
+    done <<<"$tipos"
+  done
+  if [[ $lidas -eq 0 ]]; then
+    if [[ $sem_tabela -eq 0 ]]; then
+      linha intervencoes total "" "sem registros de sessão no período"
+    else
+      linha intervencoes total "" "nenhuma sessão do período tem a tabela Intervenções humanas"
+    fi
+  else
+    for t in "${TIPOS_INTERVENCAO[@]}" indefinido; do linha intervencoes "$t" "${conta[$t]}" ""; done
+    linha intervencoes total "$total" ""
+    linha intervencoes sessoes-lidas "$lidas" ""
+  fi
+  [[ $sem_tabela -eq 0 ]] || linha intervencoes sessoes-sem-tabela "$sem_tabela" "sessão sem a tabela Intervenções humanas; fora das contagens"
+}
+
 coletar_commits
 coletar_ci
 coletar_err
+coletar_intervencoes
 
 DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
 mkdir -p "${DESTINO%/*}"
