@@ -62,6 +62,13 @@ caso_scripts 0 test "test: teste de script que passa"  "$TESTE_OK"   "$SCRIPT_OK
 caso_scripts 1 test "test: teste de script que falha"  "$TESTE_RUIM" "$SCRIPT_OK"
 caso_scripts 1 full "full: teste de script que falha"  "$TESTE_RUIM" "$SCRIPT_OK"
 
+# Plano 005, T2: o hook Stop roda verify.sh com CLAUDE_PROJECT_DIR apontando para o projeto real; se os testes
+# dos hooks a herdassem, gravariam eventos falsos no arquivo da pesquisa. O verify.sh tira a variável deles.
+TESTE_SEM_VARIAVEL=$'#!/usr/bin/env bash\n[[ -z "${CLAUDE_PROJECT_DIR:-}" ]]'   # passa só se a variável NÃO existir
+echo "▶ verify.sh: os testes dos scripts não enxergam CLAUDE_PROJECT_DIR"
+CLAUDE_PROJECT_DIR=/projeto/real caso_scripts 0 test "test: a variável não chega ao teste de script" "$TESTE_SEM_VARIAVEL" "$SCRIPT_OK"
+CLAUDE_PROJECT_DIR=/projeto/real caso_scripts 0 full "full: a variável não chega ao teste de script" "$TESTE_SEM_VARIAVEL" "$SCRIPT_OK"
+
 echo "▶ verify.sh: shellcheck só no modo full"
 caso_scripts 0 test "test: não roda shellcheck"        "$TESTE_OK" "$SCRIPT_RUIM"
 if command -v shellcheck >/dev/null; then

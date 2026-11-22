@@ -58,7 +58,9 @@ rodar_testes_dos_scripts() {
   for t in "$RAIZ"/scripts/tests/*.test.sh; do
     [[ -f "$t" ]] || continue   # sem arquivos, o glob fica literal: ignora
     echo "▶ ${t#"$RAIZ"/}"
-    "$t" || falhou=$((falhou + 1))
+    # Sem CLAUDE_PROJECT_DIR: o hook Stop chama este script com ela apontando para o projeto real, e os testes dos
+    # hooks gravariam eventos falsos em .claude/pesquisa/eventos.jsonl (plano 005, T2).
+    env -u CLAUDE_PROJECT_DIR "$t" || falhou=$((falhou + 1))
   done
   if [[ $falhou -gt 0 ]]; then
     echo "✖ $falhou teste(s) de script falharam." >&2
