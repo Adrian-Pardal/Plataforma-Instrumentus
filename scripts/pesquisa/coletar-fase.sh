@@ -53,7 +53,31 @@ coletar_commits() {
   fi
 }
 
+# --- Execuções de CI (gh) ---------------------------------------------------------------------------------------
+# Total e, por workflow, o resultado ("CI/success"; sem conclusão = "em-andamento"). gh ausente ou falhando não
+# derruba a coleta: o valor fica vazio, com a nota e um aviso no stderr.
+coletar_ci() {
+  local json total nota=""
+  if ! command -v gh >/dev/null 2>&1; then
+    linha ci total "" "gh não instalado"; return
+  fi
+  if ! json=$(cd "$RAIZ" && gh run list --created "${INICIO}..${FIM}" --limit 1000 --json workflowName,conclusion 2>/dev/null) \
+     || ! jq -e 'type == "array"' >/dev/null 2>&1 <<<"$json"; then
+    echo "aviso: 'gh run list' falhou; as execuções de CI ficam sem valor" >&2
+    linha ci total "" "gh indisponível ou sem acesso"; return
+  fi
+  total=$(jq 'length' <<<"$json")
+  [[ "$total" -lt 1000 ]] || nota="limite de 1000 execuções atingido; contagem pode estar incompleta"
+  linha ci total "$total" "$nota"
+  local n detalhe
+  while IFS=$'\t' read -r n detalhe; do
+    linha ci "$detalhe" "$n" ""
+  done < <(jq -r 'map(.detalhe = (.workflowName + "/" + (if (.conclusion // "") == "" then "em-andamento" else .conclusion end)))
+                  | group_by(.detalhe) | .[] | "\(length)\t\(.[0].detalhe)"' <<<"$json")
+}
+
 coletar_commits
+coletar_ci
 
 DESTINO="$RAIZ/docs/pesquisa/dados/$SLUG.csv"
 mkdir -p "${DESTINO%/*}"

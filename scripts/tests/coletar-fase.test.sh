@@ -26,10 +26,12 @@ confere() {   # confere <esperado> <obtido> <descrição>
 }
 
 # --- Ferramentas falsas (vão na frente do PATH) ---------------------------------------------------------------
-mkdir -p "$TMP/gh-ok" "$TMP/gh-falha" "$TMP/claude-falso"
+mkdir -p "$TMP/gh-ok" "$TMP/gh-falha" "$TMP/gh-lotado" "$TMP/claude-falso"
 # gh que responde ao "gh run list --created 2026-10-25..2026-10-28": 2 success, 1 failure, 1 em andamento.
+# Guarda a pasta de onde foi chamado em $GH_CWD_ARQ (o gh de verdade descobre o repositório pela pasta).
 cat > "$TMP/gh-ok/gh" <<'FIM'
 #!/usr/bin/env bash
+pwd > "${GH_CWD_ARQ:-/dev/null}"
 case "$*" in
   "run list "*"--created 2026-10-25..2026-10-28"*) ;;
   "run list "*"--created 2026-10-26..2026-10-26"*) echo '[]'; exit 0 ;;
@@ -38,9 +40,17 @@ esac
 echo '[{"workflowName":"CI","conclusion":"success"},{"workflowName":"CI","conclusion":"success"},{"workflowName":"CI","conclusion":"failure"},{"workflowName":"CI","conclusion":""}]'
 FIM
 printf '%s\n' '#!/usr/bin/env bash' 'echo "HTTP 401: sem acesso" >&2' 'exit 1' > "$TMP/gh-falha/gh"
+# gh que devolve 1000 execuções (o limite do "gh run list --limit 1000"): a contagem pode estar incompleta.
+printf '%s\n' '#!/usr/bin/env bash' "jq -n '[range(1000) | {workflowName: \"CI\", conclusion: \"success\"}]'" > "$TMP/gh-lotado/gh"
 # claude que marca que foi chamado: o script NUNCA pode chamar uma IA.
 printf '%s\n' '#!/usr/bin/env bash' "touch \"$TMP/claude-chamado\"" 'exit 99' > "$TMP/claude-falso/claude"
-chmod +x "$TMP/gh-ok/gh" "$TMP/gh-falha/gh" "$TMP/claude-falso/claude"
+chmod +x "$TMP/gh-ok/gh" "$TMP/gh-falha/gh" "$TMP/gh-lotado/gh" "$TMP/claude-falso/claude"
+# Caso "gh não instalado": uma pasta só com links para as ferramentas que o script usa, SEM o gh. (Tirar a pasta
+# do gh do PATH não serve: ele está em /usr/bin, junto com o env e o bash.)
+mkdir -p "$TMP/bin-sem-gh"
+for ferramenta in bash env git jq date tr sed awk grep sort uniq head tail cat mkdir mv rm basename dirname cut ls wc; do
+  ln -s "$(command -v "$ferramenta")" "$TMP/bin-sem-gh/$ferramenta" 2>/dev/null
+done
 
 # --- Montagem do projeto de exemplo ---------------------------------------------------------------------------
 commit_em() {   # commit_em <pasta> <data ISO UTC>: commit vazio com a data fixa (sem assinatura nem hooks do git)
@@ -61,7 +71,9 @@ projeto() {   # projeto <nome>; deixa o caminho em P
 
 # coleta <args...>: roda o script no projeto P, com o gh de FAKE_GH (ok ou falha) e o claude falso; guarda RC e ERR.
 coleta() {
-  ERR=$(cd / && COLETA_RAIZ="$P" PATH="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH" "$SCRIPT" "$@" 2>&1 >/dev/null); RC=$?
+  local caminho="$TMP/gh-${FAKE_GH:-ok}:$TMP/claude-falso:$PATH"
+  [[ "${FAKE_GH:-ok}" == ausente ]] && caminho="$TMP/claude-falso:$TMP/bin-sem-gh"   # FAKE_GH=ausente: nenhum gh no PATH
+  ERR=$(cd / && GH_CWD_ARQ="$TMP/gh-cwd" COLETA_RAIZ="$P" PATH="$caminho" "$SCRIPT" "$@" 2>&1 >/dev/null); RC=$?
 }
 CSV() { echo "$P/docs/pesquisa/dados/$1.csv"; }
 # celula <slug> <metrica> <detalhe> <valor|nota>: o conteúdo da célula (vazio se a linha não existe ou a célula está vazia)
@@ -103,6 +115,31 @@ confere 0 "$RC" "fora de repositório git: exit 0"
 confere "sim" "$(tem_linha fase-1 commits total)" "fora de repositório git: a linha existe"
 confere "" "$(celula fase-1 commits total valor)" "fora de repositório git: valor vazio, nunca 0"
 confere "não é um repositório git" "$(celula fase-1 commits total nota)" "fora de repositório git: a nota diz por quê"
+
+echo "▶ coletar-fase: execuções de CI (gh)"
+projeto ci
+coleta "Fase 1" 2026-10-25 2026-10-28
+confere 4 "$(celula fase-1 ci total valor)" "ci: total de execuções"
+confere 2 "$(celula fase-1 ci CI/success valor)" "ci: CI/success"
+confere 1 "$(celula fase-1 ci CI/failure valor)" "ci: CI/failure"
+confere 1 "$(celula fase-1 ci CI/em-andamento valor)" "ci: sem conclusão vira em-andamento"
+confere "$P" "$(cat "$TMP/gh-cwd")" "ci: o gh roda na pasta do projeto"
+coleta "Fase 1" 2026-10-26 2026-10-26
+confere "sim" "$(tem_linha fase-1 ci total)" "ci: nenhuma execução: a linha existe"
+confere 0 "$(celula fase-1 ci total valor)" "ci: nenhuma execução é 0 de verdade (o gh respondeu)"
+FAKE_GH=falha coleta "Fase 1" 2026-10-25 2026-10-28
+confere 0 "$RC" "gh falhando: a coleta segue (exit 0)"
+confere "" "$(celula fase-1 ci total valor)" "gh falhando: valor vazio, nunca 0"
+confere "gh indisponível ou sem acesso" "$(celula fase-1 ci total nota)" "gh falhando: a nota diz por quê"
+confere true "$([[ "$ERR" == *aviso* ]] && echo true || echo false)" "gh falhando: aviso no stderr"
+confere 3 "$(celula fase-1 commits total valor)" "gh falhando: as outras métricas continuam"
+FAKE_GH=ausente coleta "Fase 1" 2026-10-25 2026-10-28
+confere 0 "$RC" "gh ausente: a coleta segue (exit 0)"
+confere "" "$(celula fase-1 ci total valor)" "gh ausente: valor vazio"
+confere "gh não instalado" "$(celula fase-1 ci total nota)" "gh ausente: a nota diz por quê"
+FAKE_GH=lotado coleta "Fase 1" 2026-10-25 2026-10-28
+confere 1000 "$(celula fase-1 ci total valor)" "limite: conta as 1000"
+confere "limite de 1000 execuções atingido; contagem pode estar incompleta" "$(celula fase-1 ci total nota)" "limite: nota de contagem possivelmente incompleta"
 
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de coletar-fase falharam" >&2
