@@ -1,7 +1,7 @@
 # NOME
 protecao-de-branches — regras do GitHub que protegem a develop e a main, e como conferir, refazer ou afrouxar
 
-Última verificação: 2026-10-28 · Testado com: gh 2.103.2
+Última verificação: 2026-11-21 · Testado com: gh 2.103.2
 
 ## PARA QUE SERVE
 Garante que nada entra na `develop` ou na `main` sem passar por PR e pelos
@@ -11,7 +11,8 @@ apagar a regra, o código continua igual e a proteção some sem aviso.
 Regras ativas nas duas branches:
 - PR obrigatório, sem exigir aprovação (o dono é o único autor). É o PR
   obrigatório que impede o push direto na branch.
-- Checks `seguranca` e `verificar` obrigatórios.
+- Checks `seguranca`, `verificar` e `titulo-do-pr` obrigatórios (o último confere o título do PR; veja
+  `titulo-do-pr.md`).
 - `strict`: o PR precisa estar atualizado com a branch de destino antes do
   merge. Se a `develop` andou, é preciso atualizar o PR e esperar o CI de novo.
 - Sem push direto, sem force push, sem apagar a branch.
@@ -38,8 +39,8 @@ de segredos estão ligados.
 ## PRÉ-REQUISITOS
 - `gh auth status` logado como dono do repositório, com o escopo `repo`.
 - As branches `develop` e `main` já existem no remoto (`git ls-remote --heads origin`).
-- O CI já rodou ao menos uma vez: os nomes `seguranca` e `verificar` só
-  existem depois disso (veja `ci.md`).
+- O CI já rodou ao menos uma vez: os nomes `seguranca`, `verificar` e `titulo-do-pr` só
+  existem depois disso (o último só aparece depois da primeira execução em um PR; veja `ci.md`).
 - Repositório público (ou privado com GitHub Advanced Security): secret
   scanning e proteção de push de segredos não funcionam sem isso. O PATCH do
   passo 3 pode falhar ou ignorar esses campos.
@@ -57,7 +58,7 @@ de segredos estão ligados.
      gh api -X PUT "repos/Adrian-Pardal/Plataforma-Instrumentus/branches/$b/protection" --input - <<'JSON'
    {
      "required_status_checks": {"strict": true,
-       "checks": [{"context": "seguranca"}, {"context": "verificar"}]},
+       "checks": [{"context": "seguranca"}, {"context": "verificar"}, {"context": "titulo-do-pr"}]},
      "enforce_admins": true,
      "required_pull_request_reviews": {"required_approving_review_count": 0},
      "restrictions": null,
@@ -69,6 +70,19 @@ de segredos estão ligados.
    ```
    O `PUT` substitui a regra inteira: o que não está no JSON volta ao padrão.
    Rodar de novo apaga qualquer ajuste feito pelo navegador.
+   Para mudar **só** a lista de checks, sem refazer o resto da regra, use o `PATCH` (foi o que se fez em
+   2026-11-21 para acrescentar o `titulo-do-pr`; ele **substitui a lista inteira**, então repita os checks
+   que já existem):
+   ```bash
+   for b in develop main; do
+     gh api -X PATCH "repos/Adrian-Pardal/Plataforma-Instrumentus/branches/$b/protection/required_status_checks" --input - <<'JSON'
+   {"strict": true, "checks": [
+     {"context": "seguranca", "app_id": 15368},
+     {"context": "verificar", "app_id": 15368},
+     {"context": "titulo-do-pr", "app_id": 15368}]}
+   JSON
+   done
+   ```
 3. Ligar Dependabot e a proteção de segredos.
    ```bash
    gh api -X PUT repos/Adrian-Pardal/Plataforma-Instrumentus/vulnerability-alerts
@@ -87,7 +101,7 @@ for b in develop main; do
     --jq '{checks: [.required_status_checks.checks[].context], strict: .required_status_checks.strict, enforce_admins: .enforce_admins.enabled, force_push: .allow_force_pushes.enabled, apagar: .allow_deletions.enabled}'
 done
 ```
-Esperado, nas duas: `checks` com `seguranca` e `verificar`, `strict` e
+Esperado, nas duas: `checks` com `seguranca`, `verificar` e `titulo-do-pr`, `strict` e
 `enforce_admins` `true`, `force_push` e `apagar` `false`.
 
 Dependabot e proteção de segredos:
@@ -106,6 +120,8 @@ e https://github.com/Adrian-Pardal/Plataforma-Instrumentus/settings/security_ana
 ## SE DER ERRADO
 - **PR travado esperando um check que não existe:** o nome do job mudou.
   Refaça o passo 2 com o nome novo.
+- **PR aberto antes do `titulo-do-pr` existir fica esperando esse check:** ele só roda quando há um evento
+  novo no PR. Atualize a branch dele (`gh pr update-branch <número>`) ou edite o título.
 - **Preciso de uma saída de emergência (ex.: CI fora do ar):** é exceção.
   Remova a proteção só da branch necessária, faça o que precisa e refaça o
   passo 2 logo em seguida. Sem a proteção, o GitHub deixa de bloquear o

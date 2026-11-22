@@ -15,8 +15,8 @@ Tipos aceitos: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, `build`
 Exemplos: `feat: abre pesquisa`, `fix(ci): corrige o job`, `feat!: troca a escala`.
 
 Quando vale: em todo PR (abrir, editar o título, novo push, reabrir). Em push direto não roda (fica
-`skipping`). Obrigatório na proteção da `develop` e da `main`: ainda não (plano 003, T5; esta página muda
-quando isso for feito).
+`skipping`). É obrigatório na proteção da `develop` e da `main` (desde 2026-11-21; veja
+`protecao-de-branches.md`): um PR com título fora do padrão não pode ser mergeado.
 
 ## QUANDO FAZER
 - Ao abrir um PR: escreva o título já no padrão.

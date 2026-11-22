@@ -63,7 +63,7 @@ Job `titulo-do-pr`: só em `pull_request`, tipos `opened`, `edited`, `synchroniz
 - [x] T4 [infra] — help: página `docs/help/ferramentas/titulo-do-pr.md`, atualizar `ci.md`,
   `merge-de-pr.md` (configuração da estratégia de merge) e o índice do help · Cobre: pedido 1 ·
   Teste: leitura (30 min)
-- [ ] T5 [infra] — (depois do merge do PR da T1–T4) exigir `titulo-do-pr` na proteção da `develop` e da
+- [x] T5 [infra] — (depois do merge do PR da T1–T4) exigir `titulo-do-pr` na proteção da `develop` e da
   `main`, com os comandos mostrados antes de rodar, e atualizar `protecao-de-branches.md` e
   `titulo-do-pr.md` no mesmo commit · Cobre: pedido 2 · Teste: `gh api` mostra o check exigido; um PR
   com título errado fica bloqueado (30 min)
