@@ -6,14 +6,15 @@
 # Acrescenta UMA linha JSON a $CLAUDE_PROJECT_DIR/.claude/pesquisa/eventos.jsonl.
 # Regras que não mudam:
 #   - melhor esforço: NUNCA imprime nada e SEMPRE devolve 0, para não alterar o código de saída do hook;
-#   - sem CLAUDE_PROJECT_DIR não grava (assim os testes não poluem o arquivo real);
+#   - sem CLAUDE_PROJECT_DIR (ou com ela apontando para uma pasta que não existe) não grava, e não cria a pasta
+#     (assim os testes não poluem o arquivo real);
 #   - só guarda códigos e nomes (caminho ou branch, até 200 caracteres): nunca conteúdo de arquivo nem
 #     valor de variável. O JSON é montado pelo jq, que escapa aspas e quebras de linha.
 
 registrar_evento() {
   local tipo="${1:-}" hook="${2:-}" campo_a="${3:-}" campo_b="${4:-}"
   local pasta="${CLAUDE_PROJECT_DIR:-}" quando linha
-  [[ -n "$pasta" ]] || return 0
+  [[ -n "$pasta" && -d "$pasta" ]] || return 0   # pasta inexistente: não a cria (o mkdir -p criaria)
   command -v jq >/dev/null 2>&1 || return 0
   quando=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null) || return 0
   campo_a="${campo_a:0:200}"

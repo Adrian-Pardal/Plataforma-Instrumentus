@@ -78,6 +78,9 @@ projeto pasta-bloqueada
 mkdir -p "$P/.claude"; : > "$P/.claude/pesquisa"   # "pesquisa" é um ARQUIVO: o mkdir -p falha
 registrar bloqueio protect-files adr-aceito x
 confere "rc=0" "$SAIDA" "não consegue gravar: devolve 0 e não imprime"
+SAIDA=$(CLAUDE_PROJECT_DIR="$TMP/nao-existe" bash -c 'source "$1"; registrar_evento bloqueio protect-files adr-aceito x; echo "rc=$?"' _ "$LIB" 2>&1)
+confere "rc=0" "$SAIDA" "pasta do projeto inexistente: devolve 0 e não imprime"
+confere false "$([[ -e "$TMP/nao-existe" ]] && echo true || echo false)" "pasta do projeto inexistente: a lib não a cria"
 projeto tipo-desconhecido
 registrar inventado protect-files adr-aceito x
 confere "rc=0" "$SAIDA" "tipo desconhecido: devolve 0 e não imprime"
@@ -230,6 +233,43 @@ liberou "gh que não é merge"
 merge "gh pr merge --squash https://TOKEN_PR_321@exemplo.com/o/r/pull/1"
 bloqueou "merge --squash com URL de credencial" protect-merge merge-squash-ou-rebase ""
 sem_o_texto "TOKEN_PR_321" "credencial na URL do PR não vai para o evento"
+
+echo "▶ stop-verify grava o evento"
+# Projeto git com um arquivo de código novo (a.ts) e um verify.sh de mentira que sai com o código dado.
+# O stop-verify só confere se scripts/verify.sh existe e é executável, e o chama com "test".
+projeto_stop() {   # projeto_stop <nome> <código de saída do verify.sh falso | nenhum> <com código: sim|nao>
+  projeto "$1"
+  git init -q -b main "$P" || { echo "FALHA: git init" >&2; exit 1; }
+  if [[ "$2" != nenhum ]]; then
+    mkdir -p "$P/scripts"
+    printf '%s\n' '#!/usr/bin/env bash' 'echo "saída do verify de mentira"' "exit $2" > "$P/scripts/verify.sh"
+    chmod +x "$P/scripts/verify.sh"
+  fi
+  if [[ "$3" == sim ]]; then echo "x" > "$P/a.ts"; fi
+}
+json_stop() { jq -cn --arg d "$P" --argjson a "${1:-false}" '{hook_event_name:"Stop",stop_hook_active:$a,cwd:$d}'; }
+
+projeto_stop sv-falha 1 sim
+roda_hook stop-verify "$(json_stop)"
+bloqueou "testes falharam" stop-verify testes-falharam "main"
+projeto_stop sv-sem-verify nenhum sim
+roda_hook stop-verify "$(json_stop)"
+bloqueou "verify.sh ausente" stop-verify verify-ausente ""
+roda_hook stop-verify "não é json"
+bloqueou "entrada que não é JSON" stop-verify entrada-invalida ""
+projeto_stop sv-ok 0 sim
+roda_hook stop-verify "$(json_stop)"
+liberou "testes passaram"
+projeto_stop sv-sem-codigo 1 nao
+roda_hook stop-verify "$(json_stop)"
+liberou "sem mudança de código"
+projeto_stop sv-ativo 1 sim
+roda_hook stop-verify "$(json_stop true)"
+liberou "stop_hook_active (anti-loop)"
+# Raiz do projeto inexistente: bloqueia (código 2) e, sem pasta onde gravar, não cria nenhuma.
+ERR=$(printf '%s' '{"hook_event_name":"Stop","stop_hook_active":false,"cwd":"/nao/existe"}' | (cd / && CLAUDE_PROJECT_DIR="$TMP/nao-existe-2" "$RAIZ/.claude/hooks/stop-verify.sh") 2>&1 >/dev/null); RC=$?
+confere 2 "$RC" "raiz do projeto inexistente: bloqueia (código 2)"
+confere false "$([[ -e "$TMP/nao-existe-2" ]] && echo true || echo false)" "raiz do projeto inexistente: não cria a pasta"
 
 if [[ $falhas -gt 0 ]]; then
   echo "✖ $falhas caso(s) de eventos falharam" >&2
