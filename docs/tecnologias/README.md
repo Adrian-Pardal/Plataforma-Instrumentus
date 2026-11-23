@@ -17,4 +17,4 @@ relacionados: [../README.md, ../adr/README.md]
 
 A stack ainda não foi decidida (CLAUDE.md §1); cada escolha vira um [ADR](../adr/README.md) e, depois, uma página aqui.
 
-**Mantida por:** `/documentar-tecnologia` (a criar).
+**Mantida por:** [`/documentar-tecnologia`](../../.claude/skills/documentar-tecnologia/SKILL.md).
