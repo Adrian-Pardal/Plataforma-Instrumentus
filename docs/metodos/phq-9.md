@@ -34,7 +34,9 @@ São 9 itens sobre as últimas duas semanas, cada um de 0 (nenhuma vez) a 3 (qua
 - Se o item 9 tiver qualquer valor acima de 0, avisar o pesquisador e mostrar ao respondente uma mensagem de apoio
   com contatos de ajuda (segundo o documento, o CVV, telefone 188). O alerta funciona em tempo real, no momento do
   envio, e não só no relatório, e independe do escore total.
-- O ponto de corte é configurável pelo pesquisador.
+- O gatilho do item 9 é fixo: o pesquisador não pode desligá-lo nem mudá-lo.
+- O ponto de corte configurável pelo pesquisador é só o do rastreio pelo escore total (por exemplo, 9 ou 10); ele não
+  altera o alerta do item 9.
 - Se faltar algum item, o escore total fica vazio.
 - Guardar a resposta bruta.
 

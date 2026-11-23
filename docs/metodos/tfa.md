@@ -52,8 +52,9 @@ intervenção adequada, com base em reações cognitivas e emocionais antecipada
 publicaram o questionário genérico, desenvolvido em etapas de pré-validação, em acesso aberto.
 
 ## Condição de uso
-Licença CC BY 4.0 (conferida na licença do artigo de 2022, via Crossref): pode usar e adaptar citando a fonte.
-Citar Sekhon, Cartwright e Francis (2022).
+O artigo de 2022 está sob a licença CC BY 4.0 (conferida via Crossref). Essa licença vale para o texto do artigo; ela
+vale para o questionário apenas se ele estiver no texto ou no material suplementar do artigo, o que **ainda não foi
+conferido**. Citar Sekhon, Cartwright e Francis (2022).
 
 ## Versão em português
 Não encontrada na busca feita em 2026-11-22 (Crossref, buscas em inglês e português). Não equivale a "não existe";
@@ -65,6 +66,8 @@ conferir no PubMed e SciELO antes de publicar resultados.
 - Os autores definem ponto de corte? A fonte não diz. Sem ele, a plataforma não rotula ("aceitável"/"inaceitável").
 - O "% favorável (4 ou 5)" é critério dos autores ou escolha do documento de métodos? A fonte não esclarece.
 - Existe versão validada em português? Busca inicial sem resultado.
+- O questionário genérico está no texto ou no material suplementar do artigo de 2022, sob a mesma licença CC BY 4.0?
+  Conferir antes de reproduzir os itens.
 
 ## Referências
 - SEKHON, M.; CARTWRIGHT, M.; FRANCIS, J. J. Acceptability of healthcare interventions: an overview of reviews and
