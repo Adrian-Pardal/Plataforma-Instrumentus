@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "Instrumentus"
+abstract: "Plataforma de pesquisas com vários métodos (o primeiro é o de Aceitabilidade TFA): o pesquisador monta a pesquisa, publica um link público, coleta respostas anônimas e recebe o resultado calculado pela regra de cada método, com a referência científica."
+authors:
+  - family-names: Pardal Caldeiras
+    given-names: Adrian
+license: MIT
+repository-code: "https://github.com/Adrian-Pardal/Plataforma-Instrumentus"
+keywords:
+  - pesquisa
+  - questionários
+  - instrumentos de pesquisa
+  - aceitabilidade

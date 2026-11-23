@@ -17,6 +17,7 @@ a partir de `docs/templates/handoff.md`. O mais recente fica no topo.
 
 | Data | Assunto | Arquivo |
 |------|---------|---------|
+| 2026-11-22 | licença, citação e fichas dos 30 métodos | [2026-11-22-licenca-e-base-cientifica.md](2026-11-22-licenca-e-base-cientifica.md) |
 | 2026-11-22 | skills de documentação e testes (Fase 3, etapa 3) | [2026-11-22-skills-de-documentacao-e-testes.md](2026-11-22-skills-de-documentacao-e-testes.md) |
 | 2026-11-22 | proteção do agente (plano 004) | [2026-11-22-protecao-do-agente.md](2026-11-22-protecao-do-agente.md) |
 | 2026-11-22 | título do PR e estratégia de merge (planos 002 e 003, ADR 0006) | [2026-11-22-titulo-do-pr-e-estrategia-de-merge.md](2026-11-22-titulo-do-pr-e-estrategia-de-merge.md) |

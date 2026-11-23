@@ -17,5 +17,6 @@ relacionados: [../README.md, ../specs/README.md]
 | requisitos-nao-funcionais.md | desempenho, segurança, acessibilidade e privacidade, com metas | a criar |
 | casos-de-uso/ | um arquivo por caso de uso (UC-xx) e o diagrama de casos de uso | a criar |
 | rastreabilidade.md | matriz RF ↔ RN ↔ UC ↔ código ↔ CT | a criar |
+| anonimato-e-ligacao-de-respostas.md | decisão pendente: o que "anônimo" significa quando um método liga respostas da mesma pessoa | rascunho |
 
 **Mantida por:** `/regras-negocio` (a criar), `/entrevista-spec`, `/casos-de-uso` (a criar) e `/rastreabilidade` (a criar).
