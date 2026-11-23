@@ -4,7 +4,7 @@ proposito: Dizer como o SEQ funciona e como a plataforma calcula a média por ta
 status: rascunho
 atualizado: 2026-11-22
 mantido-por: manual
-relacionados: [README.md, sus.md]
+relacionados: [README.md, sus.md, ../requisitos/anonimato-e-ligacao-de-respostas.md]
 ---
 
 # SEQ (Single Ease Question)

@@ -4,7 +4,7 @@ proposito: Dizer como o IVC funciona, quais pontos de corte usa e como a platafo
 status: rascunho
 atualizado: 2026-11-22
 mantido-por: manual
-relacionados: [README.md]
+relacionados: [README.md, ../requisitos/anonimato-e-ligacao-de-respostas.md]
 ---
 
 # IVC (Índice de Validade de Conteúdo)

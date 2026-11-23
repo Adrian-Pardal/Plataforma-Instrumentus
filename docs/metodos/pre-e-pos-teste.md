@@ -4,7 +4,7 @@ proposito: Dizer como o pré e pós-teste funciona, como a plataforma pareia as 
 status: rascunho
 atualizado: 2026-11-22
 mantido-por: manual
-relacionados: [README.md, alfa-de-cronbach.md]
+relacionados: [README.md, alfa-de-cronbach.md, ../requisitos/anonimato-e-ligacao-de-respostas.md]
 ---
 
 # Pré e pós-teste

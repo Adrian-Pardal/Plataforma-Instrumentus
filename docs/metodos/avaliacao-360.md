@@ -4,7 +4,7 @@ proposito: Dizer como a avaliação 360° funciona, como a plataforma calcula e 
 status: rascunho
 atualizado: 2026-11-22
 mantido-por: manual
-relacionados: [README.md, likert.md]
+relacionados: [README.md, likert.md, ../requisitos/anonimato-e-ligacao-de-respostas.md]
 ---
 
 # Avaliação 360°

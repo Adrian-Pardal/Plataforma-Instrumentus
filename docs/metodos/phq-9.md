@@ -4,7 +4,7 @@ proposito: Dizer como o PHQ-9 funciona, como a plataforma calcula, o alerta do i
 status: rascunho
 atualizado: 2026-11-22
 mantido-por: manual
-relacionados: [README.md, gad-7.md]
+relacionados: [README.md, gad-7.md, ../requisitos/anonimato-e-ligacao-de-respostas.md]
 ---
 
 # PHQ-9 (depressão)
