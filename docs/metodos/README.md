@@ -50,12 +50,12 @@ Status: todos "não implementado" até existir spec e código. Etapa: ordem de e
 | [phq-9.md](phq-9.md) | 2 | Saúde e ciência da implementação | 3 | não implementado | a definir | Gratuito segundo o site; tradução, titular e citação não confirmados (ver ficha) |
 | [gad-7.md](gad-7.md) | 2 | Saúde e ciência da implementação | 3 | não implementado | a definir | Gratuito segundo o site; tradução, titular e citação não confirmados (ver ficha) |
 | [avaliacao-360.md](avaliacao-360.md) | 2 | Empresarial e mercado | 4 | não implementado | a definir | Uso livre, citando a fonte |
-| [sus.md](sus.md) | 2 | Software e UX | 1 | não implementado | a definir | Uso livre, citando a fonte |
+| [sus.md](sus.md) | 2 | Software e UX | 1 | não implementado | a definir | Uso livre, citando a fonte (não verificado) |
 | [ueq.md](ueq.md) | 2 | Software e UX | 3 | não implementado | UEQ (26 itens) e UEQ-S (8 itens) | Gratuito segundo o site; licença e citação não constam (ver ficha) |
-| [tam-utaut.md](tam-utaut.md) | 2 | Software e UX | 3 | não implementado | a definir | Uso livre, citando a fonte |
+| [tam-utaut.md](tam-utaut.md) | 2 | Software e UX | 3 | não implementado | a definir | Uso livre, citando a fonte (não verificado) |
 | [nasa-tlx.md](nasa-tlx.md) | 2 | Software e UX | 3 | não implementado | Sem pesos (Raw TLX) | Sem pedir permissão à NASA, inclusive para traduzir (verificado na página) |
 | [maxdiff.md](maxdiff.md) | 3 | Uso geral | 5 | não implementado | não se aplica | Uso livre, citando a fonte |
-| [metodologia-q.md](metodologia-q.md) | 3 | Uso geral | 5 | não implementado | não se aplica | Uso livre, citando a fonte |
+| [metodologia-q.md](metodologia-q.md) | 3 | Uso geral | 5 | não implementado | não se aplica | Uso livre, citando a fonte (não verificado) |
 | [delphi.md](delphi.md) | 3 | Uso geral | 5 | não implementado | não se aplica | Uso livre, citando a fonte |
 
 "Uso livre, citando a fonte" vem do documento de métodos e não foi conferido na fonte oficial. A verificação é

@@ -21,8 +21,8 @@ nem plano foi tocado. A stack continua "a definir".
   fundamentação, condição de uso, versão em português, perguntas em aberto e referências em ABNT.
 - DOIs conferidos no Crossref (um DOI do documento de origem estava errado e foi corrigido: Santos et al., 2013).
   Exemplos numéricos das Etapas 4 e 5 recalculados; todos batem com o documento.
-- Termos de uso lidos nas páginas oficiais de: Bain (marca "NPS"), UEQ, NASA-TLX, PHQ Screeners e do artigo de
-  Weiner et al. (AIM/IAM/FIM, texto aberto no Europe PMC).
+- Termos de uso lidos nas páginas oficiais de: Bain (marca "NPS"), UEQ (só a página inicial), NASA-TLX, PHQ Screeners
+  (página /terms) e do artigo de Weiner et al. (AIM/IAM/FIM, texto aberto no Europe PMC).
 - `docs/requisitos/anonimato-e-ligacao-de-respostas.md`: decisão pendente registrada, com métodos afetados, três
   opções e perguntas derivadas. Fichas afetadas apontam para ele em `relacionados`.
 - Branch `docs/licenca-e-base-cientifica`, criada a partir da `develop`, com 10 commits (9 de conteúdo e este handoff).
@@ -48,6 +48,8 @@ decidir a RN do anonimato antes da spec de qualquer método que liga respostas (
 - **Condição de uso "não verificada"** (vinda só do documento de métodos): SUS, TAM/UTAUT, UMUX-Lite, CSAT, CES, SEQ e os
   métodos gerais. Antes de reproduzir itens de qualquer questionário, conferir a licença na fonte.
 - PHQ-9 e GAD-7: o site não menciona tradução nem nomeia o titular. Ler os Termos de Uso da Pfizer.
+- UEQ: o Aviso Legal do site não foi lido; licença formal e instrução de citação não constam na página inicial.
+- TFA: a licença CC BY 4.0 é do artigo; falta conferir se o questionário está no texto ou no material suplementar.
 - Probabilidade de recomendação: a página da Bain não diz expressamente que o cálculo é livre.
 - Avaliação 360°: a média dos outros permite recuperar a média do grupo oculto (pergunta em aberto na ficha).
 - PHQ-9: alerta do item 9 em pesquisa anônima (pergunta em aberto na ficha).

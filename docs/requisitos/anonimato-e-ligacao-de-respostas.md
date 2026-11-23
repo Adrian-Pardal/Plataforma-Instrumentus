@@ -25,7 +25,7 @@ O que alguns exigem é **ligar respostas** por um código, sem nome:
 | Delphi | A resposta de cada especialista entre as rodadas; quem não respondeu é registrado | [delphi.md](../metodos/delphi.md) |
 | Avaliação 360° | O grupo de cada avaliador e a pessoa avaliada (identificada por natureza); o gestor é identificável pelo papel | [avaliacao-360.md](../metodos/avaliacao-360.md) |
 | IVC | O papel de "juiz"; o documento não diz se o juiz é identificado | [ivc.md](../metodos/ivc.md) |
-| SEQ | A nota ligada ao tempo e ao sucesso da tarefa (dentro da sessão) | [seq.md](../metodos/seq.md) |
+| SEQ | A nota ligada ao tempo e ao sucesso ou falha na tarefa; a ficha não diz como (pergunta em aberto) | [seq.md](../metodos/seq.md) |
 
 O PHQ-9 vai no sentido contrário: não exige identificar, mas o alerta do item 9 só ajudaria alguém se houvesse como
 contatar a pessoa ([phq-9.md](../metodos/phq-9.md)).
@@ -54,8 +54,9 @@ coisas diferentes. A confirmação cabe à Fase 9 (segurança e privacidade).
 - No PHQ-9: o que o pesquisador pode fazer com o alerta do item 9 numa pesquisa anônima?
 
 ## Quando decidir
-Antes de começar a spec do primeiro método que liga respostas (Etapa 4 do guia) e antes da Fase 9. Os métodos da
-Etapa 1 (MVP) não ligam respostas e não dependem desta decisão.
+Antes de começar a spec do primeiro método que liga respostas e antes da Fase 9. Na ordem do guia, o primeiro pode ser
+o SEQ (Etapa 2), se ligar a nota ao tempo e ao sucesso da tarefa exigir isso (a ficha ainda não diz); senão, são os
+da Etapa 4. Os métodos da Etapa 1 (MVP) não ligam respostas e não dependem desta decisão.
 
 ## Onde a decisão vai
 Uma RN no catálogo de regras de negócio ([README.md](README.md)); se mudar o modelo de dados, também um ADR.
