@@ -19,4 +19,4 @@ relacionados: [../README.md, ../specs/README.md]
 | rastreabilidade.md | matriz RF ↔ RN ↔ UC ↔ código ↔ CT | a criar |
 | anonimato-e-ligacao-de-respostas.md | decisão pendente: o que "anônimo" significa quando um método liga respostas da mesma pessoa | rascunho |
 
-**Mantida por:** `/regras-negocio`, `/entrevista-spec`, `/casos-de-uso` e `/rastreabilidade` (a criar).
+**Mantida por:** `/regras-negocio`, `/entrevista-spec`, `/casos-de-uso` e `/rastreabilidade`.

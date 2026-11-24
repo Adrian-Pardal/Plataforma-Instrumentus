@@ -28,6 +28,7 @@ transversal.
 | [glossario](../.claude/skills/glossario/SKILL.md) | transversal | automática | Quando um conceito novo surge numa spec, regra ou caso de uso (a `entrevista-spec` a aciona); `/glossario conferir` procura termos fora do glossário e sinônimos proibidos |
 | [regras-negocio](../.claude/skills/regras-negocio/SKILL.md) | spec | automática | Quando uma spec é aprovada (a `entrevista-spec` a aciona) ou uma regra nasce, muda ou é revogada; também `/regras-negocio <RN-xx ou spec>` |
 | [casos-de-uso](../.claude/skills/casos-de-uso/SKILL.md) | spec | automática | Quando uma spec é aprovada (a `entrevista-spec` a aciona) ou um fluxo de usuário nasce ou muda; também `/casos-de-uso <feature ou UC-NN>` |
+| [rastreabilidade](../.claude/skills/rastreabilidade/SKILL.md) | revisão | manual | Antes da `/revisar` de uma feature e ao fim de cada fase, para conferir a matriz RF ↔ RN ↔ UC ↔ código ↔ CT ↔ teste e destacar requisito sem teste, teste sem requisito e regra sem implementação (`/rastreabilidade [feature]`) |
 | [casos-de-borda](../.claude/skills/casos-de-borda/SKILL.md) | plano | automática | Quando a `casos-de-teste` a aciona, ou ao revisar uma regra ou método em busca do que pode quebrar (`/casos-de-borda <regra ou método>`) |
 
 ## Subagentes
