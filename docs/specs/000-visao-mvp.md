@@ -1,7 +1,7 @@
 ---
 titulo: Spec 000 — Visão do MVP
 proposito: Dizer o que entra no MVP da Instrumentus, o que fica de fora e em quais features ele se divide
-status: rascunho
+status: vigente
 atualizado: 2026-11-24
 mantido-por: /entrevista-spec
 relacionados: [../adr/0004-plataforma-multi-metodo-instrumentus.md, ../metodos/README.md, ../produto/visao.md, ../produto/roadmap.md]
@@ -9,7 +9,7 @@ relacionados: [../adr/0004-plataforma-multi-metodo-instrumentus.md, ../metodos/R
 
 # Spec: Visão do MVP
 
-- **Status:** Rascunho
+- **Status:** Aprovada (pelo dono, em 2026-11-24)
 - **Data:** 2026-11-24
 - **Plano:** não se aplica (esta spec orienta as specs das features; não vira código sozinha)
 
@@ -25,7 +25,7 @@ e **calcular o resultado certo de cada método**. (Origem: resposta do dono, per
 
 ## Fluxo principal
 Passos propostos a partir do CLAUDE.md §1 e da ficha do TFA; o dono corrigiu o 2 e decidiu conta e exportação.
-**Os passos 3 a 7 aguardam confirmação.**
+Os passos 3 a 7 foram aprovados pelo dono junto com a spec, em 2026-11-24.
 1. O pesquisador entra com sua conta.
 2. Cria uma pesquisa com **uma ou mais seções**; cada seção usa um **modelo padrão** de um método, com a lógica já
    estabelecida. O pesquisador só adapta o que o método permite (modo limitado; ex.: o nome da intervenção no TFA).
@@ -118,7 +118,7 @@ Candidatas, a numerar pela `/regras-negocio` depois da aprovação (nada foi num
 - Tempo de guarda e pedido de exclusão: em aberto.
 
 ## Fora de escopo
-Propostos por mim, **aguardam seu ok**:
+Aprovados pelo dono junto com a spec, em 2026-11-24:
 - Os 23 métodos das etapas 2 a 5.
 - Os modos de modelo travado e editável (só o limitado entra); vira item do roadmap.
 - Respostas ligadas à mesma pessoa (pré e pós, Delphi, 360°); depende da decisão de anonimato.
@@ -130,7 +130,7 @@ O MVP está pronto quando **(a)** os 7 métodos da etapa 1 batem com os testes d
 passam, **e (b)** uma pessoa real monta uma pesquisa, publica o link, recebe respostas de pessoas reais e vê o resultado.
 
 ## Perguntas em aberto
-- [ ] Passos 1 e 3 a 7 do fluxo: estão certos?
+- [x] Passos 1 e 3 a 7 do fluxo: estão certos? (resolvida pela aprovação da spec, 2026-11-24)
 - [ ] Regra de adaptação limitada: o que cada método permite mudar? (o dono decide por método)
 - [ ] Modo editável futuro: o resultado deve avisar "instrumento modificado"?
 - [ ] A versão em português do TFA não foi encontrada (ficha, 2026-11-22). De onde vêm os itens em português? Bloqueia a feature do TFA.

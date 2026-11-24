@@ -16,6 +16,6 @@ Uma spec por feature, a partir de `docs/templates/spec.md`. Sem spec aprovada n�
 
 | Arquivo | Do que trata | Status |
 |---|---|---|
-| [000-visao-mvp.md](000-visao-mvp.md) | o que entra no MVP, o que fica de fora e a divisão em features | Rascunho |
+| [000-visao-mvp.md](000-visao-mvp.md) | o que entra no MVP, o que fica de fora e a divisão em features | Aprovada |
 
 **Mantida por:** `/entrevista-spec`
