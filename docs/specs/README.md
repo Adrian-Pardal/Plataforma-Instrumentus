@@ -2,7 +2,7 @@
 titulo: Specs
 proposito: Indexar a spec de cada feature (o que construir)
 status: vigente
-atualizado: 2026-11-22
+atualizado: 2026-11-24
 mantido-por: /entrevista-spec
 relacionados: [../templates/spec.md, ../plans/README.md]
 ---
@@ -16,6 +16,6 @@ Uma spec por feature, a partir de `docs/templates/spec.md`. Sem spec aprovada n√
 
 | Arquivo | Do que trata | Status |
 |---|---|---|
-| (nenhuma spec ainda) | | |
+| [000-visao-mvp.md](000-visao-mvp.md) | o que entra no MVP, o que fica de fora e a divis√£o em features | Rascunho |
 
 **Mantida por:** `/entrevista-spec`
