@@ -13,7 +13,7 @@ relacionados: [../README.md, ../specs/README.md]
 
 | Arquivo | Do que trata | Status |
 |---|---|---|
-| regras-de-negocio.md | catálogo das regras RN-xx | a criar |
+| [regras-de-negocio.md](regras-de-negocio.md) | catálogo das regras RN-xx | rascunho |
 | requisitos-nao-funcionais.md | desempenho, segurança, acessibilidade e privacidade, com metas | a criar |
 | casos-de-uso/ | um arquivo por caso de uso (UC-xx) e o diagrama de casos de uso | a criar |
 | rastreabilidade.md | matriz RF ↔ RN ↔ UC ↔ código ↔ CT | a criar |
