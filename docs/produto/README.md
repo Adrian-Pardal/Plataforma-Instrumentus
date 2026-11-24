@@ -15,7 +15,7 @@ relacionados: [../README.md, ../adr/0004-plataforma-multi-metodo-instrumentus.md
 |---|---|---|
 | [visao.md](visao.md) | problema, público e proposta de valor | rascunho |
 | [personas.md](personas.md) | o pesquisador e o respondente | rascunho |
-| glossario.md | termos do domínio, com definição única e o nome no código | a criar |
+| [glossario.md](glossario.md) | termos do domínio, com definição única e o nome no código | rascunho |
 | [roadmap.md](roadmap.md) | features em ordem, com status | rascunho |
 
 **Mantida por:** `/entrevista-spec` (visão e personas), `/glossario` e `/planejar` (roadmap).
