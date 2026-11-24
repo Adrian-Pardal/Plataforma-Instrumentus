@@ -18,4 +18,4 @@ relacionados: [../README.md, ../adr/0004-plataforma-multi-metodo-instrumentus.md
 | glossario.md | termos do domínio, com definição única e o nome no código | a criar |
 | roadmap.md | features em ordem, com status | a criar |
 
-**Mantida por:** `/entrevista-spec` (visão e personas), `/glossario` (a criar) e `/planejar` (roadmap).
+**Mantida por:** `/entrevista-spec` (visão e personas), `/glossario` e `/planejar` (roadmap).
