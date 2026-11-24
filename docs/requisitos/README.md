@@ -15,7 +15,7 @@ relacionados: [../README.md, ../specs/README.md]
 |---|---|---|
 | [regras-de-negocio.md](regras-de-negocio.md) | catálogo das regras RN-xx | rascunho |
 | requisitos-nao-funcionais.md | desempenho, segurança, acessibilidade e privacidade, com metas | a criar |
-| casos-de-uso/ | um arquivo por caso de uso (UC-xx) e o diagrama de casos de uso | a criar |
+| [casos-de-uso/](casos-de-uso/README.md) | um arquivo por caso de uso (UC-xx) e o diagrama de casos de uso | rascunho |
 | rastreabilidade.md | matriz RF ↔ RN ↔ UC ↔ código ↔ CT | a criar |
 | anonimato-e-ligacao-de-respostas.md | decisão pendente: o que "anônimo" significa quando um método liga respostas da mesma pessoa | rascunho |
 
