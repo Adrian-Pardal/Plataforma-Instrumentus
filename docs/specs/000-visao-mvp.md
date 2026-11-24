@@ -4,7 +4,7 @@ proposito: Dizer o que entra no MVP da Instrumentus, o que fica de fora e em qua
 status: vigente
 atualizado: 2026-11-24
 mantido-por: /entrevista-spec
-relacionados: [../adr/0004-plataforma-multi-metodo-instrumentus.md, ../metodos/README.md, ../produto/visao.md, ../produto/roadmap.md]
+relacionados: [../adr/0004-plataforma-multi-metodo-instrumentus.md, ../metodos/README.md, ../produto/visao.md, ../produto/roadmap.md, ../requisitos/regras-de-negocio.md, ../requisitos/casos-de-uso/README.md]
 ---
 
 # Spec: Visão do MVP
@@ -94,13 +94,11 @@ O pesquisador baixa as respostas de uma pesquisa em planilha.
 - **CA-3 (abuso)** — Dado qualquer exportação, Então o arquivo não contém dado que identifique o respondente.
 
 ## Regras de negócio
-Candidatas, a numerar pela `/regras-negocio` depois da aprovação (nada foi numerado aqui):
-- Anônimo: a resposta não guarda dado que identifique o respondente.
-- Cada pesquisador vê só as suas pesquisas.
-- Uma seção calcula só pelo seu método; não se somam escores de seções diferentes.
-- Modelo em modo limitado: só os campos que o método permite podem ser adaptados.
-- Limite leve: um navegador que já respondeu é avisado e não conta nova resposta.
-- Resultado do TFA: por construto, nunca somado num escore único (ficha do TFA).
+Catálogo único: [regras-de-negocio.md](../requisitos/regras-de-negocio.md). Esta spec usa as regras
+RN-01 (resposta anônima), RN-02 (acesso só às próprias pesquisas), RN-03 (seção calcula só pelo seu método),
+RN-04 (adaptação limitada do modelo), RN-05 (limite leve por navegador), RN-06 (só pesquisa publicada recebe
+respostas) e RN-07 (pesquisa sem seção não se publica). Regras de um método ficam na ficha dele; o TFA, por
+construto e sem escore único, está na [ficha do TFA](../metodos/tfa.md).
 
 ## Requisitos não funcionais
 - A página de resposta funciona em celular e computador. O pesquisador usa só computador nesta versão.
@@ -138,6 +136,8 @@ passam, **e (b)** uma pessoa real monta uma pesquisa, publica o link, recebe res
 - [ ] A etapa final de entrega (seção 4.2 do guia) não está no repositório; a ordem usa a sugerida na tabela.
 - [ ] Retenção e exclusão de dados (LGPD); a skill `lgpd` ainda não existe.
 - [ ] Cadastro: confirmar e-mail? Recuperar senha?
+- [ ] Sair da conta: existe? E por quanto tempo o pesquisador continua dentro sem entrar de novo? (UC-02)
+- [ ] Editar ou excluir uma pesquisa: o pesquisador pode, depois de montada e depois de publicada? (UC-03)
 - [ ] Formato da exportação (CSV ou outro) e o que ela inclui.
 - [ ] Metas de desempenho, volume por pesquisa e acessibilidade.
 - [ ] Anonimato e ligação de respostas: decidir antes do primeiro método que liga respostas (fora do MVP).
