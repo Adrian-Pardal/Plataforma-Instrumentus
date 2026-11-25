@@ -13,12 +13,12 @@ Regras que valem em qualquer tela ou método. Regras de um método só ficam na 
 Spec, caso de uso e teste citam "RN-xx" em vez de repetir o texto.
 
 ### RN-01 — Resposta anônima
-- **Enunciado:** a resposta de um respondente não guarda nenhum dado que o identifique, e nenhuma exportação o revela.
+- **Enunciado:** a resposta de um respondente não guarda nenhum dado que o identifique, e nenhuma exportação o revela. Dado que identifica é qualquer um que permita descobrir quem respondeu, como nome, e-mail ou endereço de rede (IP).
 - **Motivo:** a plataforma promete respostas anônimas (CLAUDE.md §1); sem isso o respondente pode não responder com sinceridade.
 - **Valem:** uma resposta guardada só com os valores dos itens e a seção a que pertencem.
-- **Não valem:** uma resposta guardada junto com o nome ou o e-mail do respondente.
+- **Não valem:** uma resposta guardada junto com o nome, o e-mail ou o IP do respondente.
 - **Exceções:** nenhuma decidida. Métodos que ligam respostas da mesma pessoa (pré e pós, Delphi) estão fora do MVP; a decisão está em [anonimato-e-ligacao-de-respostas.md](anonimato-e-ligacao-de-respostas.md).
-- **Origem:** [spec 000](../specs/000-visao-mvp.md), RF-03 CA-1 e RF-07 CA-3; CLAUDE.md §1
+- **Origem:** [spec 000](../specs/000-visao-mvp.md), RF-03 CA-1 e RF-07 CA-3; CLAUDE.md §1; resposta do dono em 2026-11-24
 - **Aplicada em:** a preencher na implementação
 - **Testes:** a preencher
 - **Status:** Vigente
@@ -57,12 +57,12 @@ Spec, caso de uso e teste citam "RN-xx" em vez de repetir o texto.
 - **Status:** Vigente
 
 ### RN-05 — Limite leve de respostas por navegador
-- **Enunciado:** um navegador que já enviou resposta a uma pesquisa não gera nova resposta contada nessa pesquisa; o respondente é avisado.
+- **Enunciado:** um navegador que já enviou resposta a uma pesquisa não gera nova resposta contada nessa pesquisa; o respondente é avisado. O navegador é reconhecido só por um marcador aleatório guardado nele mesmo, sem IP nem dado pessoal (RN-01).
 - **Motivo:** reduzir o envio repetido, por erro ou de propósito, sem identificar ninguém.
 - **Valem:** o mesmo navegador abre o link de novo e vê o aviso, sem nova resposta contada.
-- **Não valem:** o mesmo navegador envia a mesma pesquisa duas vezes e as duas contam.
+- **Não valem:** o mesmo navegador envia a mesma pesquisa duas vezes e as duas contam; reconhecer o navegador pelo IP.
 - **Exceções:** limitação conhecida e aceita: outro navegador ou aba anônima contorna a regra. A proteção não é à prova de fraude.
-- **Origem:** [spec 000](../specs/000-visao-mvp.md), RF-03 CA-3; resposta do dono (pergunta 8)
+- **Origem:** [spec 000](../specs/000-visao-mvp.md), RF-03 CA-3; resposta do dono (pergunta 8) e em 2026-11-24
 - **Aplicada em:** a preencher na implementação
 - **Testes:** a preencher
 - **Status:** Vigente
@@ -90,7 +90,7 @@ Spec, caso de uso e teste citam "RN-xx" em vez de repetir o texto.
 - **Status:** Vigente
 
 ## Perguntas em aberto
-- [ ] **RN-01:** o que conta como "dado que identifica"? Nome e e-mail, claro. E o endereço de rede (IP)?
-- [ ] **RN-05:** o limite leve pode usar algum dado do respondente (como o IP) ou só um marcador guardado no próprio navegador? Isso afeta a RN-01.
+- [x] **RN-01:** decidido em 2026-11-24: o IP também é dado que identifica (ver RN-01).
+- [x] **RN-05:** decidido em 2026-11-24: só um marcador no próprio navegador, sem IP (ver RN-05).
 - [ ] **RN-04:** para cada método, quais campos são adaptáveis? (já está nas perguntas em aberto da spec 000; decidir por método)
 - [ ] **Termos:** as RN-01 e RN-05 usam "resposta" para o envio completo. A decisão sobre "resposta × envio" está nas perguntas do [glossário](../produto/glossario.md).
