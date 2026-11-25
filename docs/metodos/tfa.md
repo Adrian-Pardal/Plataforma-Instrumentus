@@ -60,6 +60,10 @@ conferido**. Citar Sekhon, Cartwright e Francis (2022).
 Não encontrada na busca feita em 2026-11-22 (Crossref, buscas em inglês e português). Não equivale a "não existe";
 conferir no PubMed e SciELO antes de publicar resultados.
 
+Decisão do dono (2026-11-24): no MVP os itens são traduzidos do inglês, como tradução não validada, com aviso ao
+pesquisador e ao respondente (RN-08). A tradução só pode ser feita depois de conferir a licença dos itens (pergunta
+em aberto abaixo).
+
 ## Perguntas em aberto
 - Quais itens do questionário são invertidos? O documento diz carga e custo de oportunidade, mas manda conferir as
   âncoras na versão usada. Confirmar no material suplementar do artigo de 2022 antes de implementar.

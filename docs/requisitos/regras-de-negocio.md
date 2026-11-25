@@ -89,8 +89,21 @@ Spec, caso de uso e teste citam "RN-xx" em vez de repetir o texto.
 - **Testes:** a preencher
 - **Status:** Vigente
 
+### RN-08 — Instrumento traduzido sem validação é sinalizado
+- **Enunciado:** quando os itens de uma seção são uma tradução sem validação publicada, a plataforma avisa isso ao pesquisador e ao respondente.
+- **Motivo:** quem publica o resultado e quem responde devem saber que o instrumento não é a versão validada; a validade da tradução não está comprovada.
+- **Valem:** uma seção TFA com itens traduzidos mostra o aviso "itens traduzidos do inglês; versão em português não validada".
+- **Não valem:** a mesma seção sem aviso, ou descrita como "versão validada".
+- **Exceções:** o aviso deixa de valer quando a seção usar uma versão validada.
+- **Origem:** resposta do dono em 2026-11-24 (versão em português do TFA)
+- **Aplicada em:** a preencher na implementação
+- **Testes:** a preencher
+- **Status:** Vigente
+
 ## Perguntas em aberto
 - [x] **RN-01:** decidido em 2026-11-24: o IP também é dado que identifica (ver RN-01).
 - [x] **RN-05:** decidido em 2026-11-24: só um marcador no próprio navegador, sem IP (ver RN-05).
 - [ ] **RN-04:** para cada método, quais campos são adaptáveis? (já está nas perguntas em aberto da spec 000; decidir por método)
+- [ ] **RN-08:** qual é o texto exato do aviso?
+- [ ] **RN-08:** a regra vale para qualquer método traduzido no futuro, ou só para o TFA?
 - [ ] **Termos:** as RN-01 e RN-05 usam "resposta" para o envio completo. A decisão sobre "resposta × envio" está nas perguntas do [glossário](../produto/glossario.md).
