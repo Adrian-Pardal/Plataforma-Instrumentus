@@ -14,6 +14,7 @@ A divisão e a ordem são **propostas** e aguardam o ok do dono. Os números das
 | # | Feature | RF | Depende de | Status |
 |---|---|---|---|---|
 | 1 | Conta do pesquisador | RF-01 | — | sem spec |
+| 1a | Recuperar senha (por link enviado ao e-mail) | a definir | 1 | sem spec |
 | 2 | Montar pesquisa TFA (modelo, versão, adaptação limitada) | RF-02, RF-06 | 1 | sem spec |
 | 3 | Publicar e responder (link, anônimo, limite leve, celular) | RF-03 | 2 | sem spec |
 | 4 | Resultados do TFA e encerrar pesquisa | RF-04 | 3 | sem spec |
@@ -25,4 +26,4 @@ A divisão e a ordem são **propostas** e aguardam o ok do dono. Os números das
 
 **Depois do MVP:** os 23 métodos das etapas 2 a 5; modos de modelo travado e editável.
 
-**Bloqueio conhecido:** a feature 2 depende da pergunta em aberto sobre a versão em português do TFA.
+**Bloqueio conhecido:** a feature 2 depende de o dono conferir a licença dos itens do TFA; os itens serão traduzidos como tradução não validada (RN-08).

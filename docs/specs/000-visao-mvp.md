@@ -140,7 +140,7 @@ passam, **e (b)** uma pessoa real monta uma pesquisa, publica o link, recebe res
 - [ ] A etapa final de entrega (seção 4.2 do guia) não está no repositório; a ordem usa a sugerida na tabela.
 - [ ] Retenção e exclusão de dados (LGPD); a skill `lgpd` ainda não existe.
 - [x] Cadastro: confirmar o e-mail: decidido em 2026-11-24 (RN-09).
-- [ ] Recuperar senha: existe no MVP?
+- [x] Recuperar senha: decidido em 2026-11-24: entra como feature própria do roadmap (1a), logo depois da conta; fora das 7 features do MVP inicial.
 - [ ] Sair da conta: existe? E por quanto tempo o pesquisador continua dentro sem entrar de novo? (UC-02)
 - [ ] Editar ou excluir uma pesquisa: o pesquisador pode, depois de montada e depois de publicada? (UC-03)
 - [ ] Formato da exportação (CSV ou outro) e o que ela inclui.

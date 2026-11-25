@@ -22,7 +22,7 @@ relacionados: [../../specs/000-visao-mvp.md, ../regras-de-negocio.md, ../../prod
 3. A plataforma reconhece o Pesquisador e mostra a lista das pesquisas dele.
 
 ## Fluxos alternativos
-- Nenhum decidido. "Esqueci a senha" está em aberto na spec 000.
+- Nenhum decidido. "Esqueci a senha" é a feature 1a do roadmap; vira UC próprio quando tiver spec.
 
 ## Exceções
 - **E1 (passo 2).** E-mail ou senha incorretos, inclusive e-mail sem conta → o Pesquisador não entra, e a mensagem é a mesma nos dois casos, sem revelar se o e-mail existe (RF-01 CA-2).
