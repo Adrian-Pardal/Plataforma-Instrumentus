@@ -2,7 +2,7 @@
 titulo: Registro de sessões
 proposito: Guardar um registro por sessão de trabalho para o estudo de caso
 status: vigente
-atualizado: 2026-11-22
+atualizado: 2026-11-24
 mantido-por: /handoff
 relacionados: [../protocolo.md, ../../../.claude/skills/handoff/SKILL.md]
 ---

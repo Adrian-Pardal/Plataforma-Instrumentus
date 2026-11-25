@@ -73,7 +73,7 @@ médias por construto.
 3. Todo documento novo começa com o cabeçalho de docs/templates/cabecalho.md (título, propósito, status, data, quem mantém, relacionados).
 4. Toda pasta de docs/ tem README.md de índice; docs/README.md é o mapa geral ("tenho a dúvida X → vá em Y").
 5. A documentação vai no mesmo PR do código que ela descreve.
-6. Diagramas são texto (Mermaid), dentro do .md.
+6. Diagramas são texto (Mermaid), dentro do .md. Exceção: diagramas de casos de uso usam PlantUML (o Mermaid não tem essa notação).
 7. Ligar em vez de repetir: cada regra (RN-03) é escrita uma vez; spec, caso de uso e teste apontam para ela.
 8. Identificadores estáveis: RF, RN, UC, CT, ADR, ERR, DEBT.
 9. Não misture tutorial, guia, referência e explicação no mesmo texto.
