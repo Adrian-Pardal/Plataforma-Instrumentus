@@ -100,10 +100,24 @@ Spec, caso de uso e teste citam "RN-xx" em vez de repetir o texto.
 - **Testes:** a preencher
 - **Status:** Vigente
 
+### RN-09 — Só entra na conta quem confirmou o e-mail
+- **Enunciado:** um pesquisador só entra na conta depois de confirmar o e-mail do cadastro.
+- **Motivo:** garantir que o e-mail pertence a quem se cadastrou, já que ele identifica o dono das pesquisas (RN-02).
+- **Valem:** o pesquisador abre o link de confirmação e depois entra.
+- **Não valem:** entrar com um cadastro cujo e-mail ainda não foi confirmado.
+- **Exceções:** nenhuma decidida.
+- **Origem:** resposta do dono em 2026-11-24 (cadastro)
+- **Aplicada em:** a preencher na implementação
+- **Testes:** a preencher
+- **Status:** Vigente
+
 ## Perguntas em aberto
 - [x] **RN-01:** decidido em 2026-11-24: o IP também é dado que identifica (ver RN-01).
 - [x] **RN-05:** decidido em 2026-11-24: só um marcador no próprio navegador, sem IP (ver RN-05).
 - [ ] **RN-04:** para cada método, quais campos são adaptáveis? (já está nas perguntas em aberto da spec 000; decidir por método)
 - [ ] **RN-08:** qual é o texto exato do aviso?
 - [ ] **RN-08:** a regra vale para qualquer método traduzido no futuro, ou só para o TFA?
+- [ ] **RN-09:** por quanto tempo o link de confirmação vale?
+- [ ] **RN-09:** como o pesquisador reenvia o link se o e-mail não chegar?
+- [ ] **RN-09:** o que acontece quando o e-mail já está cadastrado?
 - [ ] **Termos:** as RN-01 e RN-05 usam "resposta" para o envio completo. A decisão sobre "resposta × envio" está nas perguntas do [glossário](../produto/glossario.md).

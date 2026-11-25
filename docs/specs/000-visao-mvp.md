@@ -26,7 +26,7 @@ e **calcular o resultado certo de cada método**. (Origem: resposta do dono, per
 ## Fluxo principal
 Passos propostos a partir do CLAUDE.md §1 e da ficha do TFA; o dono corrigiu o 2 e decidiu conta e exportação.
 Os passos 3 a 7 foram aprovados pelo dono junto com a spec, em 2026-11-24.
-1. O pesquisador entra com sua conta.
+1. O pesquisador se cadastra, confirma o e-mail pelo link recebido e entra com sua conta.
 2. Cria uma pesquisa com **uma ou mais seções**; cada seção usa um **modelo padrão** de um método, com a lógica já
    estabelecida. O pesquisador só adapta o que o método permite (modo limitado; ex.: o nome da intervenção no TFA).
 3. Publica a pesquisa e recebe um link público.
@@ -40,12 +40,13 @@ Nível de visão: cada RF corresponde a uma ou mais features do roadmap. Os crit
 feature.
 
 ### RF-01 — Conta do pesquisador
-O pesquisador se cadastra e entra com e-mail e senha; vê só as pesquisas dele.
+O pesquisador se cadastra, confirma o e-mail por link e entra com e-mail e senha; vê só as pesquisas dele.
 
 **Critérios de aceite**
 - **CA-1 (sucesso)** — Dado um pesquisador cadastrado, Quando ele entra, Então vê a lista só das suas pesquisas.
 - **CA-2 (erro)** — Dado uma senha errada, Quando tenta entrar, Então não entra e a mensagem não revela se o e-mail existe.
 - **CA-3 (abuso)** — Dado a pesquisa de outro pesquisador, Quando alguém tenta abri-la ou alterá-la, Então o acesso é negado.
+- **CA-4 (erro)** — Dado um cadastro com e-mail ainda não confirmado, Quando tenta entrar, Então não entra (RN-09).
 
 ### RF-02 — Montar pesquisa por modelos
 O pesquisador cria uma pesquisa com seções; cada seção parte de um modelo padrão do método e aceita só as adaptações
@@ -84,6 +85,7 @@ abertas; AIM/IAM/FIM e SUS. Cada um segue a sua ficha em docs/metodos/.
 
 **Critérios de aceite**
 - **CA-1 (sucesso)** — Dado cada método, Quando os testes de referência da ficha rodam, Então os resultados batem.
+- **CA-2 (aviso)** — Dado uma seção cujos itens são tradução sem validação (o TFA, no MVP), Quando o pesquisador a monta ou o respondente a responde, Então o aviso de tradução não validada aparece aos dois (RN-08).
 
 ### RF-07 — Exportar respostas
 O pesquisador baixa as respostas de uma pesquisa em planilha.
@@ -97,12 +99,14 @@ O pesquisador baixa as respostas de uma pesquisa em planilha.
 Catálogo único: [regras-de-negocio.md](../requisitos/regras-de-negocio.md). Esta spec usa as regras
 RN-01 (resposta anônima), RN-02 (acesso só às próprias pesquisas), RN-03 (seção calcula só pelo seu método),
 RN-04 (adaptação limitada do modelo), RN-05 (limite leve por navegador), RN-06 (só pesquisa publicada recebe
-respostas) e RN-07 (pesquisa sem seção não se publica). Regras de um método ficam na ficha dele; o TFA, por
+respostas), RN-07 (pesquisa sem seção não se publica), RN-08 (instrumento traduzido sem validação é sinalizado) e
+RN-09 (só entra na conta quem confirmou o e-mail). Regras de um método ficam na ficha dele; o TFA, por
 construto e sem escore único, está na [ficha do TFA](../metodos/tfa.md).
 
 ## Requisitos não funcionais
 - A página de resposta funciona em celular e computador. O pesquisador usa só computador nesta versão.
 - Privacidade: resposta anônima; dados pessoais só do pesquisador (e-mail, senha).
+- A plataforma envia e-mail (confirmação de cadastro). Como enviar vira ADR quando a stack for decidida.
 - Demais metas (desempenho, volume, acessibilidade, retenção): em "Perguntas em aberto".
 
 ## Casos de abuso
@@ -131,11 +135,12 @@ passam, **e (b)** uma pessoa real monta uma pesquisa, publica o link, recebe res
 - [x] Passos 1 e 3 a 7 do fluxo: estão certos? (resolvida pela aprovação da spec, 2026-11-24)
 - [ ] Regra de adaptação limitada: o que cada método permite mudar? (o dono decide por método)
 - [ ] Modo editável futuro: o resultado deve avisar "instrumento modificado"?
-- [ ] A versão em português do TFA não foi encontrada (ficha, 2026-11-22). De onde vêm os itens em português? Bloqueia a feature do TFA.
-- [ ] Licença de uso dos itens do questionário TFA e do SUS ainda não conferida (fichas).
+- [x] Versão em português do TFA: decidido em 2026-11-24: itens traduzidos do inglês, como tradução não validada, com aviso (RN-08).
+- [ ] Licença de uso dos itens do TFA e do SUS ainda não conferida (fichas). O dono confere a do TFA; bloqueia a tradução e a feature 2.
 - [ ] A etapa final de entrega (seção 4.2 do guia) não está no repositório; a ordem usa a sugerida na tabela.
 - [ ] Retenção e exclusão de dados (LGPD); a skill `lgpd` ainda não existe.
-- [ ] Cadastro: confirmar e-mail? Recuperar senha?
+- [x] Cadastro: confirmar o e-mail: decidido em 2026-11-24 (RN-09).
+- [ ] Recuperar senha: existe no MVP?
 - [ ] Sair da conta: existe? E por quanto tempo o pesquisador continua dentro sem entrar de novo? (UC-02)
 - [ ] Editar ou excluir uma pesquisa: o pesquisador pode, depois de montada e depois de publicada? (UC-03)
 - [ ] Formato da exportação (CSV ou outro) e o que ela inclui.
